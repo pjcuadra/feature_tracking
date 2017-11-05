@@ -49,9 +49,19 @@ add_executable(tests_exec ${TEST_SOURCES})
 target_link_libraries(tests_exec ${OpenCV_LIBS} gtest gtest_main)
 
 # Create run tests target
-add_custom_target(run_tests COMMAND "${CMAKE_BINARY_DIR}/tests_exec" DEPENDS tests_exec)
+add_custom_target(run_tests
+  COMMAND "${CMAKE_BINARY_DIR}/tests_exec"
+  DEPENDS tests_exec
+)
 
 ####
 include_directories(${CMAKE_SOURCE_DIR}/include)
-add_executable(feature_det_bench ${CMAKE_SOURCE_DIR}/src/featureDetectorBenchmark.cpp)
+
+# Add all detectors sources
+file(GLOB_RECURSE DETECTOR_SOURCES ${CMAKE_SOURCE_DIR}/src/detectors/*.cpp)
+
+add_executable(feature_det_bench
+  ${CMAKE_SOURCE_DIR}/src/featureDetectorBenchmark.cpp
+  ${DETECTOR_SOURCES}
+)
 target_link_libraries(feature_det_bench ${OpenCV_LIBS})

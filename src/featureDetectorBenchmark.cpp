@@ -1,14 +1,25 @@
+
 #include <iostream>
-#include <ctime>
+
+// External
 #include <opencv2/core/core.hpp>
 #include <opencv2/features2d/features2d.hpp>
-#include <opencv2/xfeatures2d/nonfree.hpp>
+#include <opencv2/xfeatures2d.hpp>
 #include <opencv2/objdetect/objdetect.hpp>
 #include <opencv2/highgui/highgui.hpp>
-#include <Timing.hpp>
+
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
+
+// Internal
+#include <Timing.hpp>
+#include <detectors/SurfDetect.hpp>
+#include <detectors/SiftDetect.hpp>
+#include <detectors/MSDDetectorDetect.hpp>
+#include <detectors/StarDetectorDetect.hpp>
+#include <detectors/VggDetect.hpp>
+#include <detectors/HarrisCornerDetect.hpp>
 
 using namespace cv;
 using namespace cv::xfeatures2d;
@@ -16,41 +27,43 @@ using namespace std;
 
 static const String keys =
        "{help h usage ? |      | Print this message   }"
-       "{in             |      | Input image          }"
+       "{v              |      | Print Version        }"
+       "{in             |      | Input Image Path     }"
        "{show           |      | Display images       }"
-       "{surf_h         | 400  | Display images       }"
-       "{sift           |      | Include SIFT         }"
-       "{harris_th      | 50   | Harris Threshold     }"
-       "{harris_k       | 0.04 | Harris K             }"
-       "{harris_bz      | 50   | Harris Block Size    }"
-       "{harris_ap      | 31   | Harris Aperture Size }"
+       SURF_OPTIONS
+       SIFT_OPTIONS
+       MSDDETECTORDETECT_OPTIONS
+       VGGDETECT_OPTIONS
+       HARRISCORNERDETECT_OPTIONS
        ;
 
-int main( int argc, char** argv ) {
+void harrisCornerDetect(CommandLineParser parser, Mat inputImage);
 
+int main( int argc, char** argv ) {
   Mat inputImage;
-  Mat outputSurf, outputSift, outputHarris, outputHarrisNorm, outputHarrisNormScaled;
-  Ptr<SURF> surf;
-  Ptr<SIFT> sift;
-  vector<KeyPoint> keyPoints;
   int k = 0;
   CommandLineParser parser(argc, argv, keys);
   string inputImagePath = parser.get<string>("in");
-  Timing timing;
-  int surfHessianTh = parser.get<int>("surf_h");
+  MSDDetectorDetect msdDetectorDetect = MSDDetectorDetect(parser);
+  SurfDetect surfDetect = SurfDetect(parser);
+  SiftDetect siftDetect = SiftDetect(parser);
+  StarDetectorDetect starDetectorDetect = StarDetectorDetect(parser);
+  VggDetect vggDetect = VggDetect(parser);
+  HarrisCornerDetect harrisCornerDetect = HarrisCornerDetect(parser);
 
-  // Harris detector
-  int blockSize = parser.get<int>("harris_bz");
-  int apertureSize = parser.get<int>("harris_ap");
-  int harrisThreshold = parser.get<int>("harris_th");
-  double kh = parser.get<double>("harris_k");
+  if (!parser.has("in")) {
+    cout << "No input file provided" << endl;
+    return 0;
+  }
 
-  cout << "OpenCV Version: " << CV_MAJOR_VERSION << "." << CV_MINOR_VERSION << endl;
+  if (parser.has("v")) {
+    cout << "OpenCV Version: " << CV_MAJOR_VERSION << "." << CV_MINOR_VERSION << endl;
 
-  cout << "C++ Standard: ";
-  if( __cplusplus == 201103L ) cout << "C++11" << endl;
-  else if( __cplusplus == 19971L ) cout << "C++98" << endl;
-  else cout << "pre-standard C++" << endl;
+    cout << "C++ Standard: ";
+    if( __cplusplus == 201103L ) cout << "C++11" << endl;
+    else if( __cplusplus == 19971L ) cout << "C++98" << endl;
+    else cout << "pre-standard C++" << endl;
+  }
 
   inputImage = imread(inputImagePath, CV_LOAD_IMAGE_GRAYSCALE);
 
@@ -63,48 +76,32 @@ int main( int argc, char** argv ) {
     imshow("Original", inputImage);
   }
 
-  // Benchmark SURF
-  surf = SURF::create(surfHessianTh);
-  cout << "Running SURF " << endl;
-  cout << "  Hessian Threshold " << surfHessianTh << endl;
-  timing.start();
-  surf->detect(inputImage, keyPoints);
-  timing.end();
-  cout << "  ";
-  timing.print();
+  surfDetect.detect(inputImage);
+  siftDetect.detect(inputImage);
+  harrisCornerDetect.detect(inputImage);
+  vggDetect.detect(inputImage);
+  starDetectorDetect.detect(inputImage);
+  msdDetectorDetect.detect(inputImage);
 
+  cout << "Benchmark Finished" << endl;
+
+  // Wait for the ESC key to be pressed
   if (parser.has("show")) {
-    drawKeypoints(inputImage,
-      keyPoints,
-      outputSurf,
-      Scalar::all(-1),
-      DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
+    while (k != 27) {
+      k = waitKey(0);
 
-    namedWindow("SURF", WINDOW_GUI_EXPANDED);
-    imshow("SURF", outputSurf);
-  }
-
-  if (parser.has("sift")) {
-    // Benchmark SIFT
-    sift = SIFT::create();
-    cout << "Running SIFT " << endl;
-    timing.start();
-    sift->detect(inputImage, keyPoints);
-    timing.end();
-    cout << "  ";
-    timing.print();
-
-    if (parser.has("show")) {
-      drawKeypoints(inputImage,
-        keyPoints,
-        outputSift,
-        Scalar::all(-1),
-        DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
-
-      namedWindow("SIFT", WINDOW_GUI_EXPANDED);
-      imshow("SIFT", outputSift);
     }
   }
+}
+
+void harrisCornerDetect(CommandLineParser parser, Mat inputImage) {
+  Mat outputHarris, outputHarrisNorm, outputHarrisNormScaled;
+  int blockSize = parser.get<int>("harris_bz");
+  int apertureSize = parser.get<int>("harris_ap");
+  int harrisThreshold = parser.get<int>("harris_th");
+  double kh = parser.get<double>("harris_k");
+
+  Timing timing;
 
   // Benchmark Corner Harris
   cout << "Running Corner Harris" << endl;
@@ -115,7 +112,6 @@ int main( int argc, char** argv ) {
   cout << "  Aperture Size: " << apertureSize << endl;
   cout << "  K: " << kh << endl;
   cout << "  Drawing Threshold: " << harrisThreshold << endl;
-
 
   timing.start();
   cornerHarris(inputImage,
@@ -128,48 +124,38 @@ int main( int argc, char** argv ) {
   cout << "  ";
   timing.print();
 
-  if (parser.has("show")) {
+  if (!parser.has("show")) {
+    return;
+  }
 
-    /// Normalizing
-    normalize(outputHarris,
-      outputHarrisNorm,
-      0,
-      255,
-      NORM_MINMAX,
-      CV_32FC1,
-      Mat());
-    convertScaleAbs(outputHarrisNorm,
-      outputHarrisNormScaled);
+  /// Normalizing
+  normalize(outputHarris,
+    outputHarrisNorm,
+    0,
+    255,
+    NORM_MINMAX,
+    CV_32FC1,
+    Mat());
+  convertScaleAbs(outputHarrisNorm,
+    outputHarrisNormScaled);
 
-    outputHarris = inputImage;
+  inputImage.copyTo(outputHarris);
 
-    /// Drawing a circle around corners
-    for(int j = 0; j < outputHarrisNorm.rows; j++) {
-      for(int i = 0; i < outputHarrisNorm.cols; i++) {
-        if(outputHarrisNorm.at<float>(j, i) > harrisThreshold) {
-          circle(outputHarris,
-            Point(i, j),
-            1,
-            Scalar(255, 0, 0, 0));
-        }
-
+  /// Drawing a circle around corners
+  for(int j = 0; j < outputHarrisNorm.rows; j++) {
+    for(int i = 0; i < outputHarrisNorm.cols; i++) {
+      if(outputHarrisNorm.at<float>(j, i) > harrisThreshold) {
+        circle(outputHarris,
+          Point(i, j),
+          1,
+          Scalar(255, 0, 0, 0));
       }
     }
-
-    namedWindow("Harris", WINDOW_GUI_EXPANDED);
-    imshow("Harris", outputHarris);
-    namedWindow("Harris - Keypoints", WINDOW_GUI_EXPANDED);
-    imshow("Harris - Keypoints", outputHarrisNormScaled);
   }
 
-  cout << "Benchmark Finished" << endl;
-
-  // Wait for the ESC key to be pressed
-  if (parser.has("show")) {
-    while (k != 27) {
-      k = waitKey(0);
-
-    }
-  }
+  namedWindow("Harris", WINDOW_GUI_EXPANDED);
+  imshow("Harris", outputHarris);
+  namedWindow("Harris - Keypoints", WINDOW_GUI_EXPANDED);
+  imshow("Harris - Keypoints", outputHarrisNormScaled);
 
 }

@@ -1,3 +1,6 @@
+#ifndef TIMING_H
+#define TIMING_H
+
 #include <iostream>
 #include <chrono>
 
@@ -27,3 +30,5 @@ private:
   time_point<clock> endTime;
   double elapsedTime;
 };
+
+#endif /* TIMING_H */
