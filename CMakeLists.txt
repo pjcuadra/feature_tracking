@@ -2,7 +2,9 @@
 project(feature_tracking)
 
 # Define required cmake version
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.1)
+
+set (CMAKE_CXX_STANDARD 11)
 
 # Include macros
 include("${CMAKE_SOURCE_DIR}/tools/cmake/git.cmake")
@@ -44,7 +46,12 @@ file(GLOB_RECURSE TEST_SOURCES ${TEST_SOURCE_DIR}/*.cpp)
 add_executable(tests_exec ${TEST_SOURCES})
 
 # Link tests to gtest and openCV
-target_link_libraries(tests_exec opencv_core gtest gtest_main)
+target_link_libraries(tests_exec ${OpenCV_LIBS} gtest gtest_main)
 
 # Create run tests target
 add_custom_target(run_tests COMMAND "${CMAKE_BINARY_DIR}/tests_exec" DEPENDS tests_exec)
+
+####
+include_directories(${CMAKE_SOURCE_DIR}/include)
+add_executable(feature_det_bench ${CMAKE_SOURCE_DIR}/src/featureDetectorBenchmark.cpp)
+target_link_libraries(feature_det_bench ${OpenCV_LIBS})
