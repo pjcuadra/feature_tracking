@@ -1,3 +1,11 @@
+/**
+* @file FeatureDetect.hpp
+* @author Pedro Cuadra
+* @date 5 Nov 2017
+* @copyright 2017 Pedro Cuadra
+* @brief SURF Feature Detector Class
+*
+*/
 #ifndef SURFDETECT_H
 #define SURFDETECT_H
 
@@ -11,13 +19,15 @@ using namespace cv;
 using namespace cv::xfeatures2d;
 using namespace std;
 
-#define SURF_OPTIONS "{surf_h         | 400  | Display images       }"
+#define SURF_OPTIONS "{surf           |      | StarDetector Enable  }"\
+                     "{surf_h         | 400  | Display images       }"
 
 class SurfDetect : public FeatureDetect {
 public:
   SurfDetect(CommandLineParser parser) : FeatureDetect(parser, "SURF") {
     this->surfHessianTh = parser.get<int>("surf_h");
     this->detector = SURF::create(this->surfHessianTh);
+    this->enable = parser.has("surf");
   }
 
 private:

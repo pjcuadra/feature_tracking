@@ -3,10 +3,9 @@
 * @author Pedro Cuadra
 * @date 5 Nov 2017
 * @copyright 2017 Pedro Cuadra
-* @brief <brief>
+* @brief Feature Detect clas implementation
 *
 */
-
 #include <detectors/FeatureDetect.hpp>
 
 using namespace cv::xfeatures2d;
@@ -15,14 +14,15 @@ using namespace std;
 FeatureDetect::FeatureDetect(CommandLineParser parser, string name) {
   this->showEnable = parser.has("show");
   this->name = name;
+  this->allEnable = parser.has("all");
 }
 
-void FeatureDetect::runDetect(Mat inputImage) {
-  detector->detect(inputImage, this->keyPoints, this->descriptors);
+void FeatureDetect::_runDetect(Mat inputImage) {
+  detector->detect(inputImage, this->keyPoints);
   inputImage.copyTo(this->inputImage);
 }
 
-void FeatureDetect::detect(Mat inputImage) {
+void FeatureDetect::_detect(Mat inputImage) {
   Timing timing;
 
   cout << "Running " << this->name << endl;
@@ -35,12 +35,8 @@ void FeatureDetect::detect(Mat inputImage) {
   this->show();
 }
 
-void FeatureDetect::show() {
+void FeatureDetect::_show() {
   Mat output;
-
-  if (!showEnable) {
-    return;
-  }
 
   drawKeypoints(this->inputImage,
     keyPoints,
@@ -50,4 +46,61 @@ void FeatureDetect::show() {
 
   namedWindow(this->name, WINDOW_GUI_EXPANDED);
   imshow(this->name, output);
+}
+
+void FeatureDetect::printLog(string message) {
+  if (!this->debug) {
+    return;
+  }
+
+  cout << "  [log] "  << this->name << ": " << message << endl;
+}
+
+void FeatureDetect::_runCompute(Mat inputImage) {
+  detector->compute(inputImage, this->keyPoints, this->descriptors);
+  inputImage.copyTo(this->inputImage);
+}
+
+void FeatureDetect::runDetect(Mat inputImage) {
+  if (!(this->enable || this->allEnable)) {
+      return;
+  }
+
+  printLog("Running FeatureDetect::runDetect");
+
+  this->_runDetect(inputImage);
+}
+
+void FeatureDetect::detect(Mat inputImage) {
+  if (!(this->enable || this->allEnable)) {
+      return;
+  }
+
+  printLog("Running FeatureDetect::detect");
+
+  this->_detect(inputImage);
+}
+
+void FeatureDetect::show() {
+  if (!(this->enable || this->allEnable)) {
+      return;
+  }
+
+  if (!this->showEnable) {
+      return;
+  }
+
+  printLog("Running FeatureDetect::show");
+
+  this->_show();
+}
+
+void FeatureDetect::runCompute(Mat inputImage) {
+  if (!(this->enable || this->allEnable)) {
+      return;
+  }
+
+  printLog("Running FeatureDetect::runCompute");
+
+  this->_runCompute(inputImage);
 }

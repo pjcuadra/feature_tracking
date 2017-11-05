@@ -43,6 +43,22 @@ public:
 
 protected:
 
+  /** Detector */
+  Ptr<Feature2D> detector;
+  /** Detector */
+  vector<KeyPoint> keyPoints;
+  /** Detector */
+  Mat descriptors;
+  /** Detector */
+  Mat inputImage;
+  /** Detector */
+  bool showEnable = false;
+  bool enable = false;
+  bool allEnable = false;
+
+
+  virtual void runCompute(Mat inputImage);
+
   /**
    * @brief <brief>
    * @param [in] <name> <parameter_description>
@@ -59,21 +75,35 @@ protected:
    */
   virtual void show();
 
-protected:
-  /** Detector */
-  Ptr<Feature2D> detector;
-  /** Detector */
-  vector<KeyPoint> keyPoints;
-  /** Detector */
-  Mat descriptors;
-  /** Detector */
-  Mat inputImage;
-  /** Detector */
-  bool showEnable = false;
+  virtual void _detect(Mat inputImage);
+
+  virtual void _runCompute(Mat inputImage);
+
+  /**
+   * @brief <brief>
+   * @param [in] <name> <parameter_description>
+   * @return <return_description>
+   * @details <details>
+   */
+  virtual void _runDetect(Mat inputImage);
+
+  /**
+   * @brief <brief>
+   * @param [in] <name> <parameter_description>
+   * @return <return_description>
+   * @details <details>
+   */
+  virtual void _show();
 
 private:
   /** Detector */
   string name;
+  /** Detector */
+  bool debug = true;
+
+  virtual void printLog(string message);
+
+
 
 };
 

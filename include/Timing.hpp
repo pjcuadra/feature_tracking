@@ -1,3 +1,11 @@
+/**
+* @file FeatureDetect.hpp
+* @author Pedro Cuadra
+* @date 5 Nov 2017
+* @copyright 2017 Pedro Cuadra
+* @brief Feature Detector Class
+*
+*/
 #ifndef TIMING_H
 #define TIMING_H
 

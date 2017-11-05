@@ -1,4 +1,11 @@
-
+/**
+* @file FeatureDetect.hpp
+* @author Pedro Cuadra
+* @date 5 Nov 2017
+* @copyright 2017 Pedro Cuadra
+* @brief Feature Detection Benchmark
+*
+*/
 #include <iostream>
 
 // External
@@ -20,6 +27,7 @@
 #include <detectors/StarDetectorDetect.hpp>
 #include <detectors/VggDetect.hpp>
 #include <detectors/HarrisCornerDetect.hpp>
+#include <detectors/LucidDetect.hpp>
 
 using namespace cv;
 using namespace cv::xfeatures2d;
@@ -30,17 +38,19 @@ static const String keys =
        "{v              |      | Print Version        }"
        "{in             |      | Input Image Path     }"
        "{show           |      | Display images       }"
+       "{all            |      | All Detectors Enable }"
        SURF_OPTIONS
        SIFT_OPTIONS
        MSDDETECTORDETECT_OPTIONS
        VGGDETECT_OPTIONS
        HARRISCORNERDETECT_OPTIONS
+       LUCID_OPTIONS
+       STARDETECTOR_OPTIONS
        ;
 
-void harrisCornerDetect(CommandLineParser parser, Mat inputImage);
 
 int main( int argc, char** argv ) {
-  Mat inputImage;
+  Mat inputImage, inputImageColor;
   int k = 0;
   CommandLineParser parser(argc, argv, keys);
   string inputImagePath = parser.get<string>("in");
@@ -50,11 +60,7 @@ int main( int argc, char** argv ) {
   StarDetectorDetect starDetectorDetect = StarDetectorDetect(parser);
   VggDetect vggDetect = VggDetect(parser);
   HarrisCornerDetect harrisCornerDetect = HarrisCornerDetect(parser);
-
-  if (!parser.has("in")) {
-    cout << "No input file provided" << endl;
-    return 0;
-  }
+  LucidDetect lucidDetect = LucidDetect(parser);
 
   if (parser.has("v")) {
     cout << "OpenCV Version: " << CV_MAJOR_VERSION << "." << CV_MINOR_VERSION << endl;
@@ -66,22 +72,28 @@ int main( int argc, char** argv ) {
   }
 
   inputImage = imread(inputImagePath, CV_LOAD_IMAGE_GRAYSCALE);
+  inputImageColor = imread(inputImagePath, CV_LOAD_IMAGE_COLOR);
 
   if (inputImage.empty()) {
-    cout << "Upps! Couldn't read the inputImage!" << endl;
+    cout << "Oopps! Couldn't read the inputImage!" << endl;
+    return 0;
   }
 
   if (parser.has("show")) {
     namedWindow("Original", WINDOW_GUI_EXPANDED);
     imshow("Original", inputImage);
+    namedWindow("Original Color", WINDOW_GUI_EXPANDED);
+    imshow("Original Color", inputImageColor);
   }
 
+  // Run all the dection algorithm
   surfDetect.detect(inputImage);
   siftDetect.detect(inputImage);
   harrisCornerDetect.detect(inputImage);
   vggDetect.detect(inputImage);
   starDetectorDetect.detect(inputImage);
   msdDetectorDetect.detect(inputImage);
+  lucidDetect.detect(inputImageColor);
 
   cout << "Benchmark Finished" << endl;
 
@@ -92,70 +104,4 @@ int main( int argc, char** argv ) {
 
     }
   }
-}
-
-void harrisCornerDetect(CommandLineParser parser, Mat inputImage) {
-  Mat outputHarris, outputHarrisNorm, outputHarrisNormScaled;
-  int blockSize = parser.get<int>("harris_bz");
-  int apertureSize = parser.get<int>("harris_ap");
-  int harrisThreshold = parser.get<int>("harris_th");
-  double kh = parser.get<double>("harris_k");
-
-  Timing timing;
-
-  // Benchmark Corner Harris
-  cout << "Running Corner Harris" << endl;
-
-  outputHarris = Mat::zeros( inputImage.size(), CV_32FC1 );
-
-  cout << "  Block Size: " << blockSize << endl;
-  cout << "  Aperture Size: " << apertureSize << endl;
-  cout << "  K: " << kh << endl;
-  cout << "  Drawing Threshold: " << harrisThreshold << endl;
-
-  timing.start();
-  cornerHarris(inputImage,
-    outputHarris,
-    blockSize,
-    apertureSize,
-    kh,
-    BorderTypes::BORDER_DEFAULT);
-  timing.end();
-  cout << "  ";
-  timing.print();
-
-  if (!parser.has("show")) {
-    return;
-  }
-
-  /// Normalizing
-  normalize(outputHarris,
-    outputHarrisNorm,
-    0,
-    255,
-    NORM_MINMAX,
-    CV_32FC1,
-    Mat());
-  convertScaleAbs(outputHarrisNorm,
-    outputHarrisNormScaled);
-
-  inputImage.copyTo(outputHarris);
-
-  /// Drawing a circle around corners
-  for(int j = 0; j < outputHarrisNorm.rows; j++) {
-    for(int i = 0; i < outputHarrisNorm.cols; i++) {
-      if(outputHarrisNorm.at<float>(j, i) > harrisThreshold) {
-        circle(outputHarris,
-          Point(i, j),
-          1,
-          Scalar(255, 0, 0, 0));
-      }
-    }
-  }
-
-  namedWindow("Harris", WINDOW_GUI_EXPANDED);
-  imshow("Harris", outputHarris);
-  namedWindow("Harris - Keypoints", WINDOW_GUI_EXPANDED);
-  imshow("Harris - Keypoints", outputHarrisNormScaled);
-
 }

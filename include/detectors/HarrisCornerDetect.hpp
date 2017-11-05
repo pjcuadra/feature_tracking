@@ -1,3 +1,11 @@
+/**
+* @file FeatureDetect.hpp
+* @author Pedro Cuadra
+* @date 5 Nov 2017
+* @copyright 2017 Pedro Cuadra
+* @brief Harris Corner Feateure Detector
+*
+*/
 #ifndef HARRISCORNERDETECT_H
 #define HARRISCORNERDETECT_H
 
@@ -12,21 +20,23 @@ using namespace cv;
 using namespace cv::xfeatures2d;
 using namespace std;
 
-#define HARRISCORNERDETECT_OPTIONS "{harris_th      | 50   | Harris Threshold     }" \
+#define HARRISCORNERDETECT_OPTIONS "{harris         |      | Harris Enable        }" \
+                                   "{harris_th      | 50   | Harris Threshold     }" \
                                    "{harris_k       | 0.04 | Harris K             }" \
                                    "{harris_bz      | 50   | Harris Block Size    }" \
                                    "{harris_ap      | 31   | Harris Aperture Size }"
 
 class HarrisCornerDetect : public FeatureDetect {
 public:
-  HarrisCornerDetect(CommandLineParser parser) : FeatureDetect(parser, "VGG") {
+  HarrisCornerDetect(CommandLineParser parser) : FeatureDetect(parser, "Harris Corner") {
     this->blockSize = parser.get<int>("harris_bz");
     this->apertureSize = parser.get<int>("harris_ap");
     this->harrisThreshold = parser.get<int>("harris_th");
     this->kh = parser.get<double>("harris_k");
+    this->enable = parser.has("harris");
   }
 
-  virtual void detect(Mat inputImage) {
+  virtual void _detect(Mat inputImage) {
     Timing timing;
 
     inputImage.copyTo(this->inputImage);
@@ -55,13 +65,11 @@ public:
     if (this->showEnable) {
       this->show();
     }
-
-
   }
 
 protected:
 
-  virtual void show() {
+  virtual void _show() {
     Mat outputHarrisNorm, outputHarrisNormScaled;
 
     /// Normalizing

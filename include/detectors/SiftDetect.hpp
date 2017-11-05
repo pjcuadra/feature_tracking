@@ -1,3 +1,11 @@
+/**
+* @file FeatureDetect.hpp
+* @author Pedro Cuadra
+* @date 5 Nov 2017
+* @copyright 2017 Pedro Cuadra
+* @brief SIFT Feature Detector Class
+*
+*/
 #ifndef SIFTDETECT_H
 #define SIFTDETECT_H
 
@@ -11,25 +19,15 @@ using namespace cv;
 using namespace cv::xfeatures2d;
 using namespace std;
 
-#define SIFT_OPTIONS "{sift           |      | Include SIFT         }"
+#define SIFT_OPTIONS "{sift           |      | SIFT enable        }"
 
 class SiftDetect : public FeatureDetect {
 public:
   SiftDetect(CommandLineParser parser) : FeatureDetect(parser, "SIFT") {
     this->detector = SIFT::create();
-    this->siftEnabled = parser.has("sift");
+    this->enable = parser.has("sift");
+
   }
-
-  void detect(Mat inputImage) {
-    if (!this->siftEnabled) {
-      return;
-    }
-
-    FeatureDetect::detect(inputImage);
-  }
-
-private:
-  bool siftEnabled = false;
 };
 
 #endif /* SIFTDETECT_H */

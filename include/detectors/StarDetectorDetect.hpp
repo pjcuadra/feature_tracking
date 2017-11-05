@@ -1,3 +1,11 @@
+/**
+* @file FeatureDetect.hpp
+* @author Pedro Cuadra
+* @date 5 Nov 2017
+* @copyright 2017 Pedro Cuadra
+* @brief StarDetector Feature Detector Class
+*
+*/
 #ifndef STARDETECTORDETECT_H
 #define STARDETECTORDETECT_H
 
@@ -10,12 +18,13 @@ using namespace cv;
 using namespace cv::xfeatures2d;
 using namespace std;
 
-#define STARDETECTOR_OPTIONS ""
+#define STARDETECTOR_OPTIONS "{star         |      | StarDetector Enable        }"
 
 class StarDetectorDetect : public FeatureDetect {
 public:
   StarDetectorDetect(CommandLineParser parser) : FeatureDetect(parser, "StarDetector") {
     this->detector = StarDetector::create();
+    this->enable = parser.has("star");
   }
 };
 
