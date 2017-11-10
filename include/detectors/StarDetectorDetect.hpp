@@ -22,9 +22,9 @@ using namespace std;
 
 class StarDetectorDetect : public FeatureDetect {
 public:
-  StarDetectorDetect(CommandLineParser parser) : FeatureDetect(parser, "StarDetector") {
+  StarDetectorDetect(CommandLineParser parser) :
+  FeatureDetect(parser, "StarDetector", "star") {
     this->detector = StarDetector::create();
-    this->enable = parser.has("star");
   }
 };
 

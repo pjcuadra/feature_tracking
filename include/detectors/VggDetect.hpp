@@ -22,9 +22,8 @@ using namespace std;
 
 class VggDetect : public FeatureDetect {
 public:
-  VggDetect(CommandLineParser parser) : FeatureDetect(parser, "VGG") {
+  VggDetect(CommandLineParser parser) : FeatureDetect(parser, "VGG", "vgg") {
     this->detector = VGG::create();
-    this->enable = parser.has("vgg");
   }
 
 protected:

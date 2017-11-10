@@ -23,10 +23,9 @@ using namespace std;
 
 class SiftDetect : public FeatureDetect {
 public:
-  SiftDetect(CommandLineParser parser) : FeatureDetect(parser, "SIFT") {
+  SiftDetect(CommandLineParser parser) :
+  FeatureDetect(parser, "SIFT", "sift") {
     this->detector = SIFT::create();
-    this->enable = parser.has("sift");
-
   }
 };
 

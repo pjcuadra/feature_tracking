@@ -17,6 +17,12 @@ FeatureDetect::FeatureDetect(CommandLineParser parser, string name) {
   this->allEnable = parser.has("all");
 }
 
+FeatureDetect::FeatureDetect(CommandLineParser parser,
+  string name,
+  string enableFlag) : FeatureDetect(parser, name) {
+  this->enable = parser.has(enableFlag);
+}
+
 void FeatureDetect::_runDetect(Mat inputImage) {
   detector->detect(inputImage, this->keyPoints);
   inputImage.copyTo(this->inputImage);
@@ -103,4 +109,8 @@ void FeatureDetect::runCompute(Mat inputImage) {
   printLog("Running FeatureDetect::runCompute");
 
   this->_runCompute(inputImage);
+}
+
+string FeatureDetect::getName() {
+  return this->name;
 }

@@ -21,9 +21,9 @@ using namespace std;
 
 class LucidDetect : public FeatureDetect {
 public:
-  LucidDetect(CommandLineParser parser) : FeatureDetect(parser, "LUCID") {
+  LucidDetect(CommandLineParser parser) :
+  FeatureDetect(parser, "LUCID", "lucid") {
     this->detector = LUCID::create();
-    this->enable = parser.has("lucid");
   }
 
 protected:

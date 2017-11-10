@@ -32,6 +32,7 @@ public:
    * @details <details>
    */
   FeatureDetect(CommandLineParser parser, string name);
+  FeatureDetect(CommandLineParser parser, string name, string enableFlag);
 
   /**
    * @brief <brief>
@@ -40,6 +41,8 @@ public:
    * @details <details>
    */
   virtual void detect(Mat inputImage);
+
+  string getName();
 
 protected:
 
@@ -55,6 +58,8 @@ protected:
   bool showEnable = false;
   bool enable = false;
   bool allEnable = false;
+  /** Detector */
+  string name;
 
 
   virtual void runCompute(Mat inputImage);
@@ -95,13 +100,13 @@ protected:
    */
   virtual void _show();
 
+  virtual void printLog(string message);
+
 private:
-  /** Detector */
-  string name;
   /** Detector */
   bool debug = true;
 
-  virtual void printLog(string message);
+
 
 
 

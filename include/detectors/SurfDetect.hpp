@@ -24,10 +24,10 @@ using namespace std;
 
 class SurfDetect : public FeatureDetect {
 public:
-  SurfDetect(CommandLineParser parser) : FeatureDetect(parser, "SURF") {
+  SurfDetect(CommandLineParser parser) :
+  FeatureDetect(parser, "SURF", "surf") {
     this->surfHessianTh = parser.get<int>("surf_h");
     this->detector = SURF::create(this->surfHessianTh);
-    this->enable = parser.has("surf");
   }
 
 private:

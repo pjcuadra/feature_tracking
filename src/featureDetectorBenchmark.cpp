@@ -28,6 +28,11 @@
 #include <detectors/VggDetect.hpp>
 #include <detectors/HarrisCornerDetect.hpp>
 #include <detectors/LucidDetect.hpp>
+#include <detectors/SimpleBlobDetect.hpp>
+#include <detectors/CannyDetect.hpp>
+#include <detectors/ThresholdDetect.hpp>
+#include <detectors/SegmentationDetect.hpp>
+#include <detectors/FindContourDetect.hpp>
 
 using namespace cv;
 using namespace cv::xfeatures2d;
@@ -46,6 +51,11 @@ static const String keys =
        HARRISCORNERDETECT_OPTIONS
        LUCID_OPTIONS
        STARDETECTOR_OPTIONS
+       SIMPLEBLOB_OPTIONS
+       CANNY_OPTIONS
+       THRESHOLD_OPTIONS
+       SEGMENTATION_OPTIONS
+       FINDCONTOUR_OPTIONS
        ;
 
 
@@ -54,13 +64,18 @@ int main( int argc, char** argv ) {
   int k = 0;
   CommandLineParser parser(argc, argv, keys);
   string inputImagePath = parser.get<string>("in");
-  MSDDetectorDetect msdDetectorDetect = MSDDetectorDetect(parser);
-  SurfDetect surfDetect = SurfDetect(parser);
-  SiftDetect siftDetect = SiftDetect(parser);
-  StarDetectorDetect starDetectorDetect = StarDetectorDetect(parser);
-  VggDetect vggDetect = VggDetect(parser);
-  HarrisCornerDetect harrisCornerDetect = HarrisCornerDetect(parser);
-  LucidDetect lucidDetect = LucidDetect(parser);
+  MSDDetectorDetect msdDetectorDetect(parser);
+  SurfDetect surfDetect(parser);
+  SiftDetect siftDetect(parser);
+  StarDetectorDetect starDetectorDetect(parser);
+  VggDetect vggDetect(parser);
+  HarrisCornerDetect harrisCornerDetect(parser);
+  LucidDetect lucidDetect(parser);
+  SimpleBlobDetect simpleBlob(parser);
+  CannyDetect cannyDetect(parser);
+  ThresholdDetect thDetect(parser);
+  SegmentationDetect segDetect(parser);
+  FindContourDetect findCountourD(parser);
 
   if (parser.has("v")) {
     cout << "OpenCV Version: " << CV_MAJOR_VERSION << "." << CV_MINOR_VERSION << endl;
@@ -94,6 +109,11 @@ int main( int argc, char** argv ) {
   starDetectorDetect.detect(inputImage);
   msdDetectorDetect.detect(inputImage);
   lucidDetect.detect(inputImageColor);
+  simpleBlob.detect(inputImage);
+  cannyDetect.detect(inputImage);
+  thDetect.detect(inputImage);
+  segDetect.detect(inputImage);
+  findCountourD.detect(inputImage);
 
   cout << "Benchmark Finished" << endl;
 

@@ -28,12 +28,12 @@ using namespace std;
 
 class HarrisCornerDetect : public FeatureDetect {
 public:
-  HarrisCornerDetect(CommandLineParser parser) : FeatureDetect(parser, "Harris Corner") {
+  HarrisCornerDetect(CommandLineParser parser) :
+  FeatureDetect(parser, "Harris Corner", "harris") {
     this->blockSize = parser.get<int>("harris_bz");
     this->apertureSize = parser.get<int>("harris_ap");
     this->harrisThreshold = parser.get<int>("harris_th");
     this->kh = parser.get<double>("harris_k");
-    this->enable = parser.has("harris");
   }
 
   virtual void _detect(Mat inputImage) {

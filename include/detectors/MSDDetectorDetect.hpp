@@ -22,9 +22,9 @@ using namespace std;
 
 class MSDDetectorDetect : public FeatureDetect {
 public:
-  MSDDetectorDetect(CommandLineParser parser) : FeatureDetect(parser, "MSDDetectorDetect") {
+  MSDDetectorDetect(CommandLineParser parser) :
+  FeatureDetect(parser, "MSDDetectorDetect", "msd") {
     this->detector = MSDDetector::create();
-    this->enable = parser.has("msd");
   }
 };
 
