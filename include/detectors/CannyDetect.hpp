@@ -26,97 +26,81 @@ using namespace std;
 
 class CannyDetect : public FeatureDetect {
 public:
-  Mat canny_out;
-  Mat inImg;
-  int low_th;
-  int blur_size;
-  int ratio;
-  int cascade_blur;
-
   CannyDetect(CommandLineParser parser) :
   FeatureDetect(parser, "Canny", "canny") {
     this->low_th = parser.get<int>("canny_low_th");
-    this->upp_th = parser.get<int>("canny_upp_th");
   }
 
 protected:
-  virtual void _runDetect(Mat inputImage) {
-    inputImage.copyTo(inImg);
-    // blur(inImg, inImg, Size(50,50));
-    // Canny(inImg, canny_out, low_th, low_th*3, 7);
+  virtual void _runDetect() {
+    this->inputImage.copyTo(this->tmpImage);
+
+    for (int i = 0; i < this->cascade_blur; i++) {
+      /// Reduce noise with a kernel 3x3
+      blur(this->tmpImage,
+        this->tmpImage,
+        Size(this->blur_size, this->blur_size));
+    }
+
+    /// Canny detector
+    Canny(this->tmpImage,
+      this->tmpImage,
+      this->low_th,
+      this->low_th*this->ratio, 3);
+  }
+
+  virtual void updateOutputImage() {
+    this->tmpImage.copyTo(this->outputImage);
   }
 
   /**
    * @function CannyThreshold
    * @brief Trackbar callback - Canny thresholds input with a ratio 1:3
    */
-  static void CannyThreshold(int, void* ptr) {
-    Mat canny_out;
-    Mat blured;
-    Timing timing;
-
+  static void onChange(int, void* ptr) {
     CannyDetect * that = (CannyDetect *) ptr;
-
-    that->inImg.copyTo(blured);
-
-    timing.start();
-    for (int i = 0; i < that->cascade_blur; i++) {
-      /// Reduce noise with a kernel 3x3
-      blur(blured, blured, Size(that->blur_size, that->blur_size));
-    }
-
-    /// Canny detector
-    Canny(blured, canny_out, that->low_th, that->low_th*that->ratio, 3);
-    timing.end();
-    cout << "  ";
-    timing.print();
-
-    imshow(that->getName(), canny_out);
-    imshow("Canny Blur", blured);
-
+    that->runDetect();
+    that->drawOutput();
    }
 
 
-  virtual void _show() {
-    namedWindow(this->name, WINDOW_GUI_EXPANDED);
-    namedWindow("Canny Blur", WINDOW_GUI_EXPANDED);
-
-    ratio = 3;
-    blur_size = 14;
-    low_th = 5;
-    cascade_blur = 1;
+  virtual void createControls() {
+    this->ratio = 3;
+    this->blur_size = 14;
+    this->low_th = 5;
+    this->cascade_blur = 1;
 
     /// Create a Trackbar for user to enter threshold
     createTrackbar("Min Threshold:",
       this->name,
       &low_th,
       100,
-      CannyThreshold,
+      onChange,
       this);
-    createTrackbar("Ratio", this->name, &ratio, 50, CannyThreshold, this);
+    createTrackbar("Ratio", this->name, &ratio, 50, onChange, this);
     setTrackbarMin("Ratio", this->name, 1);
     createTrackbar("Blur size",
       this->name,
       &blur_size,
       30,
-      CannyThreshold,
+      onChange,
       this);
     setTrackbarMin("Blur size", this->name, 3);
     createTrackbar("Cascade Blur",
       this->name,
       &cascade_blur,
       30,
-      CannyThreshold,
+      onChange,
       this);
-
-    /// Show the image
-    CannyThreshold(0, this);
   }
 
 
 private:
-
-  int upp_th;
+  Mat tmpImage;
+  int low_th;
+  int blur_size;
+  int ratio;
+  int cascade_blur;
 };
 
 

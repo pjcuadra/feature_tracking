@@ -23,18 +23,18 @@ using namespace std;
 #define THRESHOLD_OPTIONS "{threshold         |      | Threshold Enable          }"
 class ThresholdDetect : public FeatureDetect {
 public:
-  Mat inImg;
-  int th;
-
   ThresholdDetect(CommandLineParser parser) :
   FeatureDetect(parser, "Threshold", "threshold") {
   }
 
 protected:
-  virtual void _runDetect(Mat inputImage) {
-    inputImage.copyTo(inImg);
-    // blur(inImg, inImg, Size(50,50));
-    // Canny(inImg, canny_out, low_th, low_th*3, 7);
+  virtual void _runDetect() {
+    blur(this->inputImage, this->tmpImage, Size(100, 100));
+    threshold(this->tmpImage, this->tmpImage, this->th, 255, THRESH_BINARY);
+  }
+
+  virtual void updateOutputImage() {
+    this->tmpImage.copyTo(this->outputImage);
   }
 
   /**
@@ -42,27 +42,14 @@ protected:
    * @brief Trackbar callback - Canny thresholds input with a ratio 1:3
    */
   static void onChange(int, void* ptr) {
-    Mat out;
-    Mat blured;
-    Timing timing;
-
     ThresholdDetect * that = (ThresholdDetect *) ptr;
-    that->inImg.copyTo(blured);
 
-    timing.start();
-    blur(blured, blured, Size(100, 100));
-    threshold(blured, out, that->th, 255, THRESH_BINARY);
-    timing.end();
-    cout << "  ";
-    timing.print();
-
-    imshow(that->getName(), out);
+    that->_runDetect();
+    that->drawOutput();
    }
 
 
-  virtual void _show() {
-    namedWindow(this->name, WINDOW_GUI_EXPANDED);
-
+  virtual void createControls() {
     /// Create a Trackbar for user to enter threshold
     createTrackbar("Min Threshold",
       this->name,
@@ -70,13 +57,12 @@ protected:
       255,
       onChange,
       this);
-
-    /// Show the image
-    onChange(0, this);
   }
 
 
 private:
+  Mat tmpImage;
+  int th;
 };
 
 #endif /* THESHOLDDETECT_H */

@@ -27,8 +27,8 @@ public:
   }
 
 protected:
-  virtual void _runDetect(Mat inputImage) {
-    FeatureDetect::runCompute(inputImage);
+  virtual void _runDetect() {
+    FeatureDetect::runCompute();
   }
 };
 

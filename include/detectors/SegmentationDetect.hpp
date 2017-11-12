@@ -24,9 +24,6 @@ using namespace std;
 
 class SegmentationDetect : public FeatureDetect {
 public:
-  Mat inImg;
-  int th;
-
   SegmentationDetect(CommandLineParser parser) :
   FeatureDetect(parser, "Segmentation", "segment") {
     SimpleBlobDetector::Params params;
@@ -53,60 +50,29 @@ public:
   }
 
 protected:
-  virtual void _runDetect(Mat inputImage) {
-    inputImage.copyTo(inImg);
-    // blur(inImg, inImg, Size(50,50));
-    // Canny(inImg, canny_out, low_th, low_th*3, 7);
+  virtual void _runDetect() {
+    blur(this->inputImage, this->tmpImage, Size(100, 100));
+    threshold(this->tmpImage,
+      this->tmpImage,
+      0,
+      255,
+      THRESH_BINARY | THRESH_OTSU);
+    this->detector->detect(this->tmpImage, this->keyPoints);
   }
 
-  /**
-   * @function CannyThreshold
-   * @brief Trackbar callback - Canny thresholds input with a ratio 1:3
-   */
-  static void onChange(int, void* ptr) {
-    Mat out;
-    Mat blured;
-    Timing timing;
+  virtual void updateOutputImage() {
+    cvtColor(this->tmpImage, this->outputImage, CV_GRAY2RGB);
 
-    SegmentationDetect * that = (SegmentationDetect *) ptr;
-    that->inImg.copyTo(blured);
-
-    timing.start();
-    blur(blured, blured, Size(100, 100));
-    threshold(blured, out, that->th, 255, THRESH_BINARY);
-    that->detector->detect(out, that->keyPoints);
-
-    timing.end();
-    cout << "  ";
-    timing.print();
-
-    drawKeypoints(out,
-      that->keyPoints,
-      out,
+    drawKeypoints(this->outputImage,
+      this->keyPoints,
+      this->outputImage,
       Scalar::all(-1),
       DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
 
-    imshow(that->getName(), out);
-   }
-
-
-  virtual void _show() {
-    namedWindow(this->name, WINDOW_GUI_EXPANDED);
-
-    /// Create a Trackbar for user to enter threshold
-    createTrackbar("Min Threshold",
-      this->name,
-      &th,
-      255,
-      onChange,
-      this);
-
-    /// Show the image
-    onChange(0, this);
   }
 
-
 private:
+  Mat tmpImage;
 };
 
 #endif /* SEGMENTATIONDETECT_H */

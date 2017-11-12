@@ -7,6 +7,7 @@
 *
 */
 #include <iostream>
+#include <dirent.h>
 
 // External
 #include <opencv2/core/core.hpp>
@@ -21,6 +22,7 @@
 
 // Internal
 #include <Timing.hpp>
+#include <Debug.hpp>
 #include <detectors/SurfDetect.hpp>
 #include <detectors/SiftDetect.hpp>
 #include <detectors/MSDDetectorDetect.hpp>
@@ -31,8 +33,11 @@
 #include <detectors/SimpleBlobDetect.hpp>
 #include <detectors/CannyDetect.hpp>
 #include <detectors/ThresholdDetect.hpp>
+#include <detectors/AdaptativeThresholdDetect.hpp>
 #include <detectors/SegmentationDetect.hpp>
 #include <detectors/FindContourDetect.hpp>
+#include <detectors/RoadDetect.hpp>
+#include <detectors/OtsuThresholdDetect.hpp>
 
 using namespace cv;
 using namespace cv::xfeatures2d;
@@ -42,6 +47,7 @@ static const String keys =
        "{help h usage ? |      | Print this message   }"
        "{v              |      | Print Version        }"
        "{in             |      | Input Image Path     }"
+       "{indir          |      | Input Directory Path }"
        "{show           |      | Display images       }"
        "{all            |      | All Detectors Enable }"
        SURF_OPTIONS
@@ -56,6 +62,9 @@ static const String keys =
        THRESHOLD_OPTIONS
        SEGMENTATION_OPTIONS
        FINDCONTOUR_OPTIONS
+       ROADDETECT_OPTIONS
+       ADAPTATIVTHRESHOLD_OPTIONS
+       OTSUTHRESHOLD_OPTIONS
        ;
 
 
@@ -64,18 +73,13 @@ int main( int argc, char** argv ) {
   int k = 0;
   CommandLineParser parser(argc, argv, keys);
   string inputImagePath = parser.get<string>("in");
-  MSDDetectorDetect msdDetectorDetect(parser);
-  SurfDetect surfDetect(parser);
-  SiftDetect siftDetect(parser);
-  StarDetectorDetect starDetectorDetect(parser);
-  VggDetect vggDetect(parser);
-  HarrisCornerDetect harrisCornerDetect(parser);
-  LucidDetect lucidDetect(parser);
-  SimpleBlobDetect simpleBlob(parser);
-  CannyDetect cannyDetect(parser);
-  ThresholdDetect thDetect(parser);
-  SegmentationDetect segDetect(parser);
-  FindContourDetect findCountourD(parser);
+  vector<FeatureDetect*> algGrayScalePool, algColorPool;
+  list<string> lInputImagePath;
+  DIR *dir;
+  struct dirent *ent;
+
+  Debug::setEnable(true);
+  FeatureDetect::enableLog(true);
 
   if (parser.has("v")) {
     cout << "OpenCV Version: " << CV_MAJOR_VERSION << "." << CV_MINOR_VERSION << endl;
@@ -86,34 +90,83 @@ int main( int argc, char** argv ) {
     else cout << "pre-standard C++" << endl;
   }
 
-  inputImage = imread(inputImagePath, CV_LOAD_IMAGE_GRAYSCALE);
-  inputImageColor = imread(inputImagePath, CV_LOAD_IMAGE_COLOR);
+  if (parser.has("in")) {
+    lInputImagePath.push_back(parser.get<string>("in"));
+  }
+
+  if (parser.has("indir")) {
+    if ((dir = opendir(parser.get<string>("indir").c_str())) != NULL) {
+      /* print all the files and directories within directory */
+      while ((ent = readdir(dir)) != NULL) {
+        cout << "file: " << ent->d_name << endl;
+      }
+      closedir (dir);
+    } else {
+      /* could not open directory */
+      perror ("");
+      return EXIT_FAILURE;
+    }
+  }
+
+  // Add all algorithms to the pool (COLOR ONLY)
+  algColorPool.push_back(new LucidDetect(parser));
+
+  // Add all algorithms to the pool (GRAY SCALE ONLY)
+  algGrayScalePool.push_back(new FindContourDetect(parser));
+  algGrayScalePool.push_back(new MSDDetectorDetect(parser));
+  algGrayScalePool.push_back(new SurfDetect(parser));
+  algGrayScalePool.push_back(new SiftDetect(parser));
+  algGrayScalePool.push_back(new StarDetectorDetect(parser));
+  algGrayScalePool.push_back(new VggDetect(parser));
+  algGrayScalePool.push_back(new HarrisCornerDetect(parser));
+  algGrayScalePool.push_back(new SimpleBlobDetect(parser));
+  algGrayScalePool.push_back(new CannyDetect(parser));
+  algGrayScalePool.push_back(new ThresholdDetect(parser));
+  algGrayScalePool.push_back(new SegmentationDetect(parser));
+  algGrayScalePool.push_back(new RoadDetect(parser));
+  algGrayScalePool.push_back(new AdaptativeThresholdDetect(parser));
+  algGrayScalePool.push_back(new OtsuThresholdDetect(parser));
+
+  inputImage = imread(inputImagePath, CV_LOAD_IMAGE_COLOR);
 
   if (inputImage.empty()) {
     cout << "Oopps! Couldn't read the inputImage!" << endl;
     return 0;
   }
 
-  if (parser.has("show")) {
-    namedWindow("Original", WINDOW_GUI_EXPANDED);
-    imshow("Original", inputImage);
+  TRACE_LINE(__FILE__, __LINE__);
+
+  if (parser.has("show") && !parser.has("indir")) {
     namedWindow("Original Color", WINDOW_GUI_EXPANDED);
-    imshow("Original Color", inputImageColor);
+    imshow("Original Color", inputImage);
   }
 
-  // Run all the dection algorithm
-  surfDetect.detect(inputImage);
-  siftDetect.detect(inputImage);
-  harrisCornerDetect.detect(inputImage);
-  vggDetect.detect(inputImage);
-  starDetectorDetect.detect(inputImage);
-  msdDetectorDetect.detect(inputImage);
-  lucidDetect.detect(inputImageColor);
-  simpleBlob.detect(inputImage);
-  cannyDetect.detect(inputImage);
-  thDetect.detect(inputImage);
-  segDetect.detect(inputImage);
-  findCountourD.detect(inputImage);
+  TRACE_LINE(__FILE__, __LINE__);
+
+  // Run all color detections
+  for (int i = 0; i < algColorPool.size(); i++) {
+    algColorPool[i]->detect(inputImage);
+    algColorPool[i]->printStats();
+  }
+
+  TRACE_LINE(__FILE__, __LINE__);
+
+  // Convert image to gray scale
+  cvtColor(inputImage, inputImage, COLOR_RGB2GRAY);
+  if (parser.has("show") && !parser.has("indir")) {
+    namedWindow("Original", WINDOW_GUI_EXPANDED);
+    imshow("Original", inputImage);
+  }
+
+  TRACE_LINE(__FILE__, __LINE__);
+
+  // Run all grary scale detection
+  for (int i = 0; i < algGrayScalePool.size(); i++) {
+    algGrayScalePool[i]->detect(inputImage);
+    algGrayScalePool[i]->printStats();
+  }
+
+  TRACE_LINE(__FILE__, __LINE__);
 
   cout << "Benchmark Finished" << endl;
 

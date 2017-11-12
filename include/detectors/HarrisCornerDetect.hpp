@@ -34,42 +34,25 @@ public:
     this->apertureSize = parser.get<int>("harris_ap");
     this->harrisThreshold = parser.get<int>("harris_th");
     this->kh = parser.get<double>("harris_k");
+    paramsString << "  Block Size: " << blockSize << endl;
+    paramsString << "  Aperture Size: " << apertureSize << endl;
+    paramsString << "  K: " << kh << endl;
+    paramsString << "  Drawing Threshold: " << harrisThreshold << endl;
   }
 
-  virtual void _detect(Mat inputImage) {
-    Timing timing;
+protected:
 
-    inputImage.copyTo(this->inputImage);
-
-    // Benchmark Corner Harris
-    cout << "Running Corner Harris" << endl;
-
-    outputHarris = Mat::zeros( inputImage.size(), CV_32FC1 );
-
-    cout << "  Block Size: " << blockSize << endl;
-    cout << "  Aperture Size: " << apertureSize << endl;
-    cout << "  K: " << kh << endl;
-    cout << "  Drawing Threshold: " << harrisThreshold << endl;
-
-    timing.start();
+  virtual void _runDetect() {
     cornerHarris(this->inputImage,
       this->outputHarris,
       this->blockSize,
       this->apertureSize,
       this->kh,
       BorderTypes::BORDER_DEFAULT);
-    timing.end();
-    cout << "  ";
-    timing.print();
-
-    if (this->showEnable) {
-      this->show();
-    }
   }
 
-protected:
 
-  virtual void _show() {
+  virtual void updateOutputImage() {
     Mat outputHarrisNorm, outputHarrisNormScaled;
 
     /// Normalizing
@@ -96,11 +79,14 @@ protected:
         }
       }
     }
+    //
+    // namedWindow("Harris", WINDOW_GUI_EXPANDED);
+    // imshow("Harris", outputHarris);
+    // namedWindow("Harris - Keypoints", WINDOW_GUI_EXPANDED);
+    // imshow("Harris - Keypoints", outputHarrisNormScaled);
 
-    namedWindow("Harris", WINDOW_GUI_EXPANDED);
-    imshow("Harris", outputHarris);
-    namedWindow("Harris - Keypoints", WINDOW_GUI_EXPANDED);
-    imshow("Harris - Keypoints", outputHarrisNormScaled);
+    outputHarrisNormScaled.copyTo(this->outputImage);
+
   }
 
 private:

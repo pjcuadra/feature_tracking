@@ -24,90 +24,83 @@ using namespace std;
 
 class FindContourDetect : public FeatureDetect {
 public:
-  Mat inImg;
-  int th;
-  bool fill;
 
   FindContourDetect(CommandLineParser parser) :
   FeatureDetect(parser, "FindContour", "findcontour") {
   }
 
+
+
 protected:
 
-  virtual void _runDetect(Mat inputImage) {
-    inputImage.copyTo(inImg);
-    // blur(inImg, inImg, Size(50,50));
-    // Canny(inImg, canny_out, low_th, low_th*3, 7);
+  void setFill(bool enable) {
+    this->fill = enable;
   }
 
-  /**
-   * @function CannyThreshold
-   * @brief Trackbar callback - Canny thresholds input with a ratio 1:3
-   */
-  static void onChange(int pos, void* ptr) {
-    Mat out;
-    Mat blured;
-    Timing timing;
-    vector<vector<Point> > contours0;
-    vector<Vec4i> hierarchy;
+  bool getFill() {
+    return this->fill;
+  }
 
-    FindContourDetect * that = (FindContourDetect *) ptr;
-    that->inImg.copyTo(blured);
+  void createColorsVector() {
+    colorsVec.clear();
 
-    timing.start();
-    blur(blured, blured, Size(100, 100));
-    threshold(blured, out, that->th, 255, THRESH_BINARY);
-    findContours(out, contours0, hierarchy, RETR_TREE, CHAIN_APPROX_SIMPLE);
+    for(int idx = 0 ; idx < contours0.size(); idx++ ) {
+      colorsVec.push_back(Scalar( rand()&255, rand()&255, rand()&255));
+    }
+  }
 
-    timing.end();
-    cout << "  ";
-    timing.print();
+  virtual void _runDetect() {
+    blur(this->inputImage, this->tmpImg, Size(100, 100));
+    threshold(this->tmpImg, this->tmpImg, 0, 255, THRESH_BINARY | THRESH_OTSU);
+    findContours(this->tmpImg,
+      contours0,
+      hierarchy,
+      RETR_TREE,
+      CHAIN_APPROX_SIMPLE);
 
-    cvtColor(that->inImg, out, CV_GRAY2RGB);
+    this->createColorsVector();
+  }
 
-    for(int idx = 0 ; idx < contours0.size(); idx++ )
-    {
-        Scalar color( rand()&255, rand()&255, rand()&255 );
-        if (that->fill) {
-          drawContours(out, contours0, idx, color, FILLED, 8, hierarchy);
+  virtual void updateOutputImage() {
+    cvtColor(this->inputImage, this->outputImage, CV_GRAY2RGB);
+
+    for(int idx = 0 ; idx < contours0.size(); idx++ ) {
+        if (getFill()) {
+          drawContours(this->outputImage,
+            contours0,
+            idx,
+            colorsVec[idx],
+            FILLED,
+            8,
+            hierarchy);
         } else {
-          drawContours(out, contours0, idx, color, 10);
+          drawContours(this->outputImage,
+            contours0,
+            idx,
+            colorsVec[idx],
+            10);
         }
     }
-
-
-    imshow(that->getName(), out);
-   }
+  }
 
   static void onClick(int state, void* ptr) {
     FindContourDetect * that = (FindContourDetect *) ptr;
 
-    that->fill = (state != 0);
-
-    onChange(0, ptr);
-
+    that->setFill(state != 0);
+    that->drawOutput();
   }
 
-  virtual void _show() {
-    namedWindow(this->name, WINDOW_GUI_EXPANDED);
-
-
-    /// Create a Trackbar for user to enter threshold
-    createTrackbar("Min Threshold",
-      this->name,
-      &th,
-      255,
-      onChange,
-      this);
-
+  virtual void createControls() {
     createButton("Fill Regions", onClick, this, QT_CHECKBOX, true);
-
-    /// Show the image
-    onChange(0, this);
   }
-
 
 private:
+  vector<vector<Point> > contours0;
+  vector<Vec4i> hierarchy;
+  Mat tmpImg;
+  vector<Scalar> colorsVec;
+  bool fill;
+
 };
 
 #endif /* FINDCONTOURDETECT_H */

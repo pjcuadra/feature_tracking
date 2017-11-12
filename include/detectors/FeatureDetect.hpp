@@ -10,6 +10,7 @@
 #define FEATURE_DETECTOR_H
 
 #include <iostream>
+#include <list>
 
 #include <opencv2/core/utility.hpp>
 #include <opencv2/core/core.hpp>
@@ -24,6 +25,8 @@ using namespace std;
 
 class FeatureDetect {
 public:
+  /** Detector */
+  static bool debug;
 
   /**
    * @brief Constructor
@@ -42,7 +45,13 @@ public:
    */
   virtual void detect(Mat inputImage);
 
+  void printStats();
+
+  void collectStats(double delta);
+
   string getName();
+
+  static void enableLog(bool enable);
 
 protected:
 
@@ -60,9 +69,11 @@ protected:
   bool allEnable = false;
   /** Detector */
   string name;
+  Mat outputImage;
+  stringstream paramsString;
 
 
-  virtual void runCompute(Mat inputImage);
+  virtual void runCompute();
 
   /**
    * @brief <brief>
@@ -70,7 +81,35 @@ protected:
    * @return <return_description>
    * @details <details>
    */
-  virtual void runDetect(Mat inputImage);
+  virtual void runDetect();
+
+  virtual void _detect(Mat inputImage);
+
+  virtual void _runCompute();
+
+  /**
+   * @brief <brief>
+   * @param [in] <name> <parameter_description>
+   * @return <return_description>
+   * @details <details>
+   */
+  virtual void _runDetect();
+
+  /**
+   * @brief <brief>
+   * @param [in] <name> <parameter_description>
+   * @return <return_description>
+   * @details <details>
+   */
+  virtual void updateOutputImage();
+
+  virtual void printLog(string message);
+
+  virtual void createControls();
+  void drawOutput();
+
+private:
+  vector<double> timeDeltas;
 
   /**
    * @brief <brief>
@@ -79,34 +118,6 @@ protected:
    * @details <details>
    */
   virtual void show();
-
-  virtual void _detect(Mat inputImage);
-
-  virtual void _runCompute(Mat inputImage);
-
-  /**
-   * @brief <brief>
-   * @param [in] <name> <parameter_description>
-   * @return <return_description>
-   * @details <details>
-   */
-  virtual void _runDetect(Mat inputImage);
-
-  /**
-   * @brief <brief>
-   * @param [in] <name> <parameter_description>
-   * @return <return_description>
-   * @details <details>
-   */
-  virtual void _show();
-
-  virtual void printLog(string message);
-
-private:
-  /** Detector */
-  bool debug = true;
-
-
 
 
 

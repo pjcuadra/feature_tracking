@@ -62,6 +62,7 @@ file(GLOB_RECURSE DETECTOR_SOURCES ${CMAKE_SOURCE_DIR}/src/detectors/*.cpp)
 
 add_executable(feature_det_bench
   ${CMAKE_SOURCE_DIR}/src/featureDetectorBenchmark.cpp
+  ${CMAKE_SOURCE_DIR}/src/Debug.cpp
   ${DETECTOR_SOURCES}
 )
 target_link_libraries(feature_det_bench ${OpenCV_LIBS})

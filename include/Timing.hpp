@@ -31,6 +31,10 @@ public:
     cout << "Elapsed time: " << elapsedTime << "s" << endl;
   }
 
+  double getDelta() {
+    return this->elapsedTime;
+  }
+
 private:
   typedef high_resolution_clock clock;
   typedef duration<double, std::ratio<1> > second;
