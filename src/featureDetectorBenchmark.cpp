@@ -45,7 +45,7 @@ using namespace std;
 
 static const String keys =
        "{help h usage ? |      | Print this message   }"
-       "{v              |      | Print Version        }"
+       "{v              |      | Verbose              }"
        "{in             |      | Input Image Path     }"
        "{indir          |      | Input Directory Path }"
        "{show           |      | Display images       }"
@@ -74,12 +74,13 @@ int main( int argc, char** argv ) {
   CommandLineParser parser(argc, argv, keys);
   string inputImagePath = parser.get<string>("in");
   vector<FeatureDetect*> algGrayScalePool, algColorPool;
-  list<string> lInputImagePath;
+  vector<string> lInputImagePath;
   DIR *dir;
   struct dirent *ent;
+  bool enableGui = parser.has("show") && !parser.has("indir");
 
-  Debug::setEnable(true);
-  FeatureDetect::enableLog(true);
+  Debug::setEnable(parser.has("v"));
+  FeatureDetect::enableLog(parser.has("v"));
 
   if (parser.has("v")) {
     cout << "OpenCV Version: " << CV_MAJOR_VERSION << "." << CV_MINOR_VERSION << endl;
@@ -90,6 +91,11 @@ int main( int argc, char** argv ) {
     else cout << "pre-standard C++" << endl;
   }
 
+  if (!(parser.has("in") || parser.has("indir"))) {
+    cout << "No input file specified" << endl;
+    return EXIT_FAILURE;
+  }
+
   if (parser.has("in")) {
     lInputImagePath.push_back(parser.get<string>("in"));
   }
@@ -98,7 +104,12 @@ int main( int argc, char** argv ) {
     if ((dir = opendir(parser.get<string>("indir").c_str())) != NULL) {
       /* print all the files and directories within directory */
       while ((ent = readdir(dir)) != NULL) {
-        cout << "file: " << ent->d_name << endl;
+        // cout << "file: " << ent->d_name << endl;
+        if (ent->d_type != DT_REG) {
+          continue;
+        }
+
+        lInputImagePath.push_back(parser.get<string>("indir") + "/" + ent->d_name);
       }
       closedir (dir);
     } else {
@@ -127,54 +138,61 @@ int main( int argc, char** argv ) {
   algGrayScalePool.push_back(new AdaptativeThresholdDetect(parser));
   algGrayScalePool.push_back(new OtsuThresholdDetect(parser));
 
-  inputImage = imread(inputImagePath, CV_LOAD_IMAGE_COLOR);
+  for (int i = 0; i < lInputImagePath.size(); i++) {
+    inputImage = imread(lInputImagePath[i], CV_LOAD_IMAGE_COLOR);
 
-  if (inputImage.empty()) {
-    cout << "Oopps! Couldn't read the inputImage!" << endl;
-    return 0;
+    if (inputImage.empty()) {
+      cout << "Oopps! Couldn't read the inputImage!" << endl;
+      return 0;
+    }
+
+    TRACE_LINE(__FILE__, __LINE__);
+
+    if (enableGui) {
+      namedWindow("Original Color", WINDOW_GUI_EXPANDED);
+      imshow("Original Color", inputImage);
+    }
+
+    TRACE_LINE(__FILE__, __LINE__);
+
+    // Run all color detections
+    for (int i = 0; i < algColorPool.size(); i++) {
+      algColorPool[i]->detect(inputImage);
+    }
+
+    TRACE_LINE(__FILE__, __LINE__);
+
+    // Convert image to gray scale
+    cvtColor(inputImage, inputImage, COLOR_RGB2GRAY);
+    if (enableGui) {
+      namedWindow("Original", WINDOW_GUI_EXPANDED);
+      imshow("Original", inputImage);
+    }
+
+    TRACE_LINE(__FILE__, __LINE__);
+
+    // Run all grary scale detection
+    for (int i = 0; i < algGrayScalePool.size(); i++) {
+      algGrayScalePool[i]->detect(inputImage);
+    }
+
+    TRACE_LINE(__FILE__, __LINE__);
   }
 
-  TRACE_LINE(__FILE__, __LINE__);
-
-  if (parser.has("show") && !parser.has("indir")) {
-    namedWindow("Original Color", WINDOW_GUI_EXPANDED);
-    imshow("Original Color", inputImage);
-  }
-
-  TRACE_LINE(__FILE__, __LINE__);
-
-  // Run all color detections
   for (int i = 0; i < algColorPool.size(); i++) {
-    algColorPool[i]->detect(inputImage);
     algColorPool[i]->printStats();
   }
 
-  TRACE_LINE(__FILE__, __LINE__);
-
-  // Convert image to gray scale
-  cvtColor(inputImage, inputImage, COLOR_RGB2GRAY);
-  if (parser.has("show") && !parser.has("indir")) {
-    namedWindow("Original", WINDOW_GUI_EXPANDED);
-    imshow("Original", inputImage);
-  }
-
-  TRACE_LINE(__FILE__, __LINE__);
-
-  // Run all grary scale detection
   for (int i = 0; i < algGrayScalePool.size(); i++) {
-    algGrayScalePool[i]->detect(inputImage);
     algGrayScalePool[i]->printStats();
   }
-
-  TRACE_LINE(__FILE__, __LINE__);
 
   cout << "Benchmark Finished" << endl;
 
   // Wait for the ESC key to be pressed
-  if (parser.has("show")) {
+  if (enableGui) {
     while (k != 27) {
       k = waitKey(0);
-
     }
   }
 }

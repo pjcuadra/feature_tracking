@@ -28,7 +28,7 @@ FeatureDetect::FeatureDetect(CommandLineParser parser,
 }
 
 void FeatureDetect::_detect(Mat inputImage) {
-  cout << "Running " << this->name << endl;
+  printLog(this->name);
   inputImage.copyTo(this->inputImage);
   this->runDetect();
   this->show();
