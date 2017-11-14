@@ -1,11 +1,27 @@
-/**
-* @file FeatureDetect.hpp
-* @author Pedro Cuadra
-* @date 5 Nov 2017
-* @copyright 2017 Pedro Cuadra
-* @brief StarDetector Feature Detector Class
-*
-*/
+/*
+ * MIT License
+ *
+ * Copyright (c) 2017 Pedro Cuadra
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ *
+ */
 #ifndef ROADDETECT_H
 #define ROADDETECT_H
 
@@ -21,20 +37,35 @@ using namespace cv;
 using namespace cv::xfeatures2d;
 using namespace std;
 
-#define ROADDETECT_OPTIONS                                                     \
-  "{roaddetect      |      | Road Detect Enable          }"
-
 class RoadDetect : public FeatureDetect {
 public:
+  /** Comand line parser options */
+  static const String options;
+
+  /**
+   * Road detection
+   * @param parser Comand Line Parser
+   */
   RoadDetect(CommandLineParser parser)
       : FeatureDetect(parser, "RoadDetect", "roaddetect") {}
 
+  /**
+   * Set fill contours flag
+   * @param enable Enable value
+   */
   void setFill(bool enable) { this->fill = enable; }
 
+  /**
+   * Get fill contour flag
+   * @return fill contour flag value
+   */
   bool getFill() { return this->fill; }
 
 protected:
-  virtual void _runDetect() {
+  /**
+   * Run feature detection algorithm
+   */
+  virtual void runDetect() {
     TRACE_LINE(__FILE__, __LINE__);
 
     contours0.clear();
@@ -48,6 +79,9 @@ protected:
     this->createColorsVector();
   }
 
+  /**
+   * Update the output image
+   */
   virtual void updateOutputImage() {
     RotatedRect ellipse;
     float exentricity;
@@ -93,14 +127,14 @@ protected:
   }
 
   /**
-   * @function CannyThreshold
-   * @brief Trackbar callback - Canny thresholds input with a ratio 1:3
+   * Trackbar on change event callback
+   * @param pos current trackbar possition
+   * @param ptr pointer to the user data
    */
   static void onChange(int pos, void *ptr) {
     RoadDetect *that = (RoadDetect *)ptr;
 
-    that->_runDetect();
-    that->drawOutput();
+    that->redetect();
   }
 
   static void onClick(int state, void *ptr) {
@@ -110,14 +144,9 @@ protected:
     that->drawOutput();
   }
 
-  void createColorsVector() {
-    colorsVec.clear();
-
-    for (int idx = 0; idx < contours0.size(); idx++) {
-      colorsVec.push_back(Scalar(rand() & 255, rand() & 255, rand() & 255));
-    }
-  }
-
+  /**
+   * Create the window's controls
+   */
   virtual void createControls() {
     exentricityMin = 0;
     exentricityMax = 100;
@@ -132,6 +161,7 @@ protected:
   }
 
 private:
+  /** Temporal Image storage */
   Mat tmpImage;
   bool fill;
   int exentricityMin;
@@ -139,6 +169,19 @@ private:
   vector<vector<Point>> contours0;
   vector<Vec4i> hierarchy;
   vector<Scalar> colorsVec;
+
+  /**
+   * Create the contours colors vector
+   */
+  void createColorsVector() {
+    colorsVec.clear();
+
+    for (int idx = 0; idx < contours0.size(); idx++) {
+      colorsVec.push_back(Scalar(rand() & 255, rand() & 255, rand() & 255));
+    }
+  }
 };
+
+const String RoadDetect::options = "{roaddetect | | Road Detect Enable }";
 
 #endif /* ROADDETECT_H */

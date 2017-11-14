@@ -1,11 +1,27 @@
-/**
-* @file FeatureDetect.hpp
-* @author Pedro Cuadra
-* @date 5 Nov 2017
-* @copyright 2017 Pedro Cuadra
-* @brief StarDetector Feature Detector Class
-*
-*/
+/*
+ * MIT License
+ *
+ * Copyright (c) 2017 Pedro Cuadra
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ *
+ */
 #ifndef CANNYDETECT_H
 #define CANNYDETECT_H
 
@@ -20,20 +36,25 @@ using namespace cv;
 using namespace cv::xfeatures2d;
 using namespace std;
 
-#define CANNY_OPTIONS                                                          \
-  "{canny         |      | Canny Enable          }"                            \
-  "{canny_low_th  | 100  | Canny Lower Threshold }"                            \
-  "{canny_upp_th  | 200  | Canny Upper Threshold }"
-
 class CannyDetect : public FeatureDetect {
 public:
+  /** Comand line parser options */
+  static const String options;
+
+  /**
+   * Adaptative Threshold feature detection
+   * @param parser Comand Line Parser
+   */
   CannyDetect(CommandLineParser parser)
       : FeatureDetect(parser, "Canny", "canny") {
     this->low_th = parser.get<int>("canny_low_th");
   }
 
 protected:
-  virtual void _runDetect() {
+  /**
+   * Run feature detection algorithm
+   */
+  virtual void runDetect() {
     this->inputImage.copyTo(this->tmpImage);
 
     for (int i = 0; i < this->cascade_blur; i++) {
@@ -47,19 +68,25 @@ protected:
           this->low_th * this->ratio, 3);
   }
 
+  /**
+   * Update the output image
+   */
   virtual void updateOutputImage() { this->tmpImage.copyTo(this->outputImage); }
 
   /**
-   * @function CannyThreshold
-   * @brief Trackbar callback - Canny thresholds input with a ratio 1:3
+   * Trackbar on change event callback
+   * @param state current trackbar possition
+   * @param ptr pointer to the user data
    */
-  static void onChange(int, void *ptr) {
+  static void onChange(int state, void *ptr) {
     CannyDetect *that = (CannyDetect *)ptr;
 
-    that->runDetect();
-    that->drawOutput();
+    that->redetect();
   }
 
+  /**
+   * Create the window's controls
+   */
   virtual void createControls() {
     this->ratio = 3;
     this->blur_size = 14;
@@ -77,11 +104,20 @@ protected:
   }
 
 private:
+  /** Temporal Image storage */
   Mat tmpImage;
+  /** Lower threshold */
   int low_th;
+  /** Blur Kernel size */
   int blur_size;
+  /** Lower/Upper thresholds ration */
   int ratio;
+  /** Number of cascaded blur blocks */
   int cascade_blur;
 };
+
+const String CannyDetect::options =
+    "{canny        |     | Canny Enable          }"
+    "{canny_low_th | 100 | Canny Lower Threshold }";
 
 #endif /* CANNYDETECT_H */

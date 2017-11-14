@@ -1,11 +1,27 @@
-/**
-* @file FeatureDetect.hpp
-* @author Pedro Cuadra
-* @date 5 Nov 2017
-* @copyright 2017 Pedro Cuadra
-* @brief StarDetector Feature Detector Class
-*
-*/
+/*
+ * MIT License
+ *
+ * Copyright (c) 2017 Pedro Cuadra
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ *
+ */
 #ifndef ADAPTATIVTHESHOLDDETECT_H
 #define ADAPTATIVTHESHOLDDETECT_H
 
@@ -20,25 +36,41 @@ using namespace cv;
 using namespace cv::xfeatures2d;
 using namespace std;
 
-#define ADAPTATIVTHRESHOLD_OPTIONS                                             \
-  "{athreshold         |      | Adaptative Threshold Enable          }"
-
 class AdaptativeThresholdDetect : public FeatureDetect {
 public:
+  /** Comand line parser options */
+  static const String options;
+
+  /**
+   * Adaptative Threshold feature detection
+   * @param parser Comand Line Parser
+   */
   AdaptativeThresholdDetect(CommandLineParser parser)
       : FeatureDetect(parser, "Adaptative Threshold", "athreshold") {}
 
 protected:
-  virtual void _runDetect() {
+  /**
+   * Run feature detection algorithm
+   */
+  virtual void runDetect() {
     blur(this->inputImage, tmpImage, Size(100, 100));
     adaptiveThreshold(tmpImage, tmpImage, 255, ADAPTIVE_THRESH_MEAN_C,
                       THRESH_BINARY, 3, 1);
   }
 
-  void updateOutputImage() { this->tmpImage.copyTo(this->outputImage); }
+  /**
+   * Update the output image
+   */
+  virtual void updateOutputImage() { this->tmpImage.copyTo(this->outputImage); }
 
 private:
+  /**
+   * Temporal Image storage
+   */
   Mat tmpImage;
 };
+
+const String AdaptativeThresholdDetect::options =
+    "{athreshold | | Adaptative Threshold Enable }";
 
 #endif /* ADAPTATIVTHESHOLDDETECT_H */

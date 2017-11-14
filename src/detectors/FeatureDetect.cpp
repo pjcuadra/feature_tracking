@@ -1,12 +1,27 @@
-/**
-* @file FeatureDetect.cpp
-* @author Pedro Cuadra
-* @date 5 Nov 2017
-* @copyright 2017 Pedro Cuadra
-* @brief Feature Detect clas implementation
-*
-*/
-
+/*
+ * MIT License
+ *
+ * Copyright (c) 2017 Pedro Cuadra
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ *
+ */
 #include <fstream>
 
 #include <detectors/FeatureDetect.hpp>
@@ -18,6 +33,9 @@ using namespace std;
 
 bool FeatureDetect::debug = false;
 
+/**
+ * Feature Detection Wrapper Class
+ */
 FeatureDetect::FeatureDetect(CommandLineParser parser, string name)
     : timingStats(name + " - Timing", "s"),
       keyPointsStats(name + " - Keypoints", "") {
@@ -26,46 +44,56 @@ FeatureDetect::FeatureDetect(CommandLineParser parser, string name)
   this->allEnable = parser.has("all");
 }
 
+/**
+ * Feature Detection Wrapper Class
+ */
 FeatureDetect::FeatureDetect(CommandLineParser parser, string name,
                              string enableFlag)
     : FeatureDetect(parser, name) {
   this->enable = parser.has(enableFlag);
 }
 
-void FeatureDetect::_detect(Mat inputImage) {
-  printLog(this->name);
-  inputImage.copyTo(this->inputImage);
-  this->runDetect();
-  this->show();
-}
-
-void FeatureDetect::printLog(string message) {
-  if (!this->debug) {
-    return;
-  }
-
-  cout << "  [log] " << this->name << ": " << message << endl;
-}
-
-void FeatureDetect::_runCompute() {
+/**
+ * Run Compute method of the detector
+ */
+void FeatureDetect::runCompute() {
   detector->compute(this->inputImage, this->keyPoints, this->descriptors);
 }
 
-void FeatureDetect::_runDetect() {
+/**
+ * Wrapper run computation of the keypoint descriptors
+ */
+void FeatureDetect::_runCompute() {
+  if (!(this->enable || this->allEnable)) {
+    return;
+  }
+
+  printLog("Running FeatureDetect::_runCompute");
+
+  this->runCompute();
+}
+
+/**
+ * Run feature detection algorithm
+ */
+void FeatureDetect::runDetect() {
   TRACE_LINE(__FILE__, __LINE__);
   detector->detect(this->inputImage, this->keyPoints);
 }
 
-void FeatureDetect::runDetect() {
+/**
+ * Wrapper run detection of the keypoint
+ */
+void FeatureDetect::_runDetect() {
   Timing timing;
   if (!(this->enable || this->allEnable)) {
     return;
   }
 
-  printLog("Running FeatureDetect::runDetect");
+  printLog("Running FeatureDetect::_runDetect");
 
   timing.start();
-  this->_runDetect();
+  this->runDetect();
   timing.end();
 
   this->collectStats(timing.getDelta());
@@ -75,21 +103,39 @@ void FeatureDetect::runDetect() {
   }
 }
 
+/**
+ * Apply detection algorithm
+ */
 void FeatureDetect::detect(Mat inputImage) {
   if (!(this->enable || this->allEnable)) {
     return;
   }
 
   printLog("Running FeatureDetect::detect");
-
-  this->_detect(inputImage);
+  inputImage.copyTo(this->inputImage);
+  this->_runDetect();
+  this->show();
 }
 
+/**
+ * Re-apply the detection algorithm to the stored input image
+ */
+void FeatureDetect::redetect() {
+  this->_runDetect();
+  this->drawOutput();
+}
+
+/**
+ * Update the output image
+ */
 void FeatureDetect::updateOutputImage() {
   drawKeypoints(this->inputImage, keyPoints, this->outputImage, Scalar::all(-1),
                 DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
 }
 
+/**
+ * Draw ouput image to the GUI
+ */
 void FeatureDetect::drawOutput() {
   printLog("Running FeatureDetect::drawOutput");
   updateOutputImage();
@@ -97,6 +143,9 @@ void FeatureDetect::drawOutput() {
   imshow(this->name, this->outputImage);
 }
 
+/**
+ * Show the GUI
+ */
 void FeatureDetect::show() {
   if (!(this->enable || this->allEnable)) {
     return;
@@ -120,21 +169,14 @@ void FeatureDetect::show() {
   drawOutput();
 }
 
-void FeatureDetect::runCompute() {
-  if (!(this->enable || this->allEnable)) {
-    return;
-  }
-
-  printLog("Running FeatureDetect::runCompute");
-
-  this->_runCompute();
-}
-
+/**
+ * Get feature detector name
+ */
 string FeatureDetect::getName() { return this->name; }
 
-// TODO: Refactor this to be a separate class or use an existing one
-void FeatureDetect::generateStatsString() {}
-
+/**
+ * Print statistics
+ */
 void FeatureDetect::printStats() {
   if (!(this->enable || this->allEnable)) {
     return;
@@ -147,10 +189,12 @@ void FeatureDetect::printStats() {
 
   cout << timingStats.str();
   cout << keyPointsStats.str();
-  generateStatsString();
   cout << statsString.str();
 }
 
+/**
+ * Dump stats to file
+ */
 void FeatureDetect::dumpStatsToFile(string path) {
   if (!(this->enable || this->allEnable)) {
     return;
@@ -164,18 +208,29 @@ void FeatureDetect::dumpStatsToFile(string path) {
 
   outFile << timingStats.str();
   outFile << keyPointsStats.str();
-  generateStatsString();
   outFile << statsString.str();
 }
 
+/**
+ * Collect timing stats
+ */
 void FeatureDetect::collectStats(double delta) {
   this->timingStats.push_back(delta);
 }
 
+/**
+ * Create the window's controls
+ */
 void FeatureDetect::createControls() {}
 
+/**
+ * Enable logging
+ */
 void FeatureDetect::enableLog(bool enable) { FeatureDetect::debug = enable; }
 
+/**
+ * Write image to file
+ */
 void FeatureDetect::writeImage(string path) {
   if (!(this->enable || this->allEnable)) {
     return;
@@ -183,4 +238,18 @@ void FeatureDetect::writeImage(string path) {
   imwrite(path, this->outputImage);
 }
 
+/**
+ * Get feature detection enable state
+ */
 bool FeatureDetect::getEnable() { return this->enable || this->allEnable; }
+
+/**
+ * Print Log Message
+ */
+void FeatureDetect::printLog(string message) {
+  if (!this->debug) {
+    return;
+  }
+
+  cout << "  [log] " << this->name << ": " << message << endl;
+}

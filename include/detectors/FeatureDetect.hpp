@@ -1,9 +1,25 @@
-/**
- * @file FeatureDetect.hpp
- * @author Pedro Cuadra
- * @date 5 Nov 2017
- * @copyright 2017 Pedro Cuadra
- * @brief Feature Detector Class
+/*
+ * MIT License
+ *
+ * Copyright (c) 2017 Pedro Cuadra
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
  *
  */
 #ifndef FEATURE_DETECTOR_H
@@ -26,106 +42,154 @@ using namespace std;
 
 class FeatureDetect {
 public:
-  /** Detector */
   static bool debug;
-
   /**
-   * @brief Constructor
-   * @param [in] parser Command line parser
-   * @param [in] name Name of the feature detector
-   * @details <details>
+   * Feature Detection Wrapper Class
+   * @param parser Command line parser
+   * @param name   Name of the feature detector
    */
   FeatureDetect(CommandLineParser parser, string name);
+
+  /**
+   * Feature Detection Wrapper Class
+   * @param parser     Command line parser
+   * @param name       Name of the feature detector
+   * @param enableFlag Enable comand line flag name
+   */
   FeatureDetect(CommandLineParser parser, string name, string enableFlag);
 
   /**
-   * @brief <brief>
-   * @param [in] <name> <parameter_description>
-   * @return <return_description>
-   * @details <details>
+   * Apply detection algorithm
+   * @param inputImage Input image
    */
-  virtual void detect(Mat inputImage);
+  void detect(Mat inputImage);
 
+  /**
+   * Print statistics
+   */
   void printStats();
 
+  /**
+   * Collect timing stats
+   * @param delta delta time
+   */
   void collectStats(double delta);
 
+  /**
+   * Get feature detector name
+   * @return detector name
+   */
   string getName();
 
+  /**
+   * Enable logging
+   * @param enable Enable state
+   */
   static void enableLog(bool enable);
 
+  /**
+   * Write image to file
+   * @param path Path of the file to be written
+   */
   virtual void writeImage(string path);
 
+  /**
+   * Get feature detection enable state
+   */
   bool getEnable();
 
+  /**
+   * Dump stats to file
+   * @param path Path of the file to be written
+   */
   void dumpStatsToFile(string path);
 
 protected:
   /** Detector */
   Ptr<Feature2D> detector;
-  /** Detector */
+  /** Keypoints */
   vector<KeyPoint> keyPoints;
-  /** Detector */
+  /** Descriptos */
   Mat descriptors;
-  /** Detector */
+  /** Input Image */
   Mat inputImage;
-  /** Detector */
+  /** Enable showing of image and GUI */
   bool showEnable = false;
+  /** Enable state of the detector */
   bool enable = false;
+  /** All algorithms enable flag */
   bool allEnable = false;
-  /** Detector */
+  /** Name of the detector */
   string name;
+  /** Output Image */
   Mat outputImage;
+  /** Parameters string */
   stringstream paramsString;
+  /** Statistics string */
   stringstream statsString;
+  /** Keypoints statistics */
   Stats<int> keyPointsStats;
 
+  /**
+   * Re-apply the detection algorithm to the stored input image
+   */
+  void redetect();
+
+  /**
+   * Draw ouput image to the GUI
+   */
+  void drawOutput();
+
+  /**
+   * Run Compute method of the detector
+   */
   virtual void runCompute();
 
   /**
-   * @brief <brief>
-   * @param [in] <name> <parameter_description>
-   * @return <return_description>
-   * @details <details>
+   * Run feature detection algorithm
    */
   virtual void runDetect();
 
-  virtual void _detect(Mat inputImage);
-
-  virtual void _runCompute();
-
   /**
-   * @brief <brief>
-   * @param [in] <name> <parameter_description>
-   * @return <return_description>
-   * @details <details>
+   * Print Log Message
+   * @param message Message to print
    */
-  virtual void _runDetect();
+  void printLog(string message);
 
   /**
-   * @brief <brief>
-   * @param [in] <name> <parameter_description>
-   * @return <return_description>
-   * @details <details>
+   * Create the window's controls
+   */
+  virtual void createControls();
+
+  /**
+   * Update the output image
    */
   virtual void updateOutputImage();
 
-  void printLog(string message);
-
-  virtual void createControls();
-  void drawOutput();
-
 private:
-  /**
-   * @brief <brief>
-   * @param [in] <name> <parameter_description>
-   * @return <return_description>
-   * @details <details>
-   */
-  virtual void show();
-  void generateStatsString();
-
+  /** Timing stats collector */
   Stats<double> timingStats;
+
+  /**
+   * Show the GUI
+   */
+  void show();
+
+  /**
+   * Wrapper run computation of the keypoint descriptors
+   *
+   * @warning Do not overload since timig stats are automatically gathered thru
+   * this interface
+   */
+  virtual void _runCompute();
+
+  /**
+   * Wrapper run detection of the keypoint
+   *
+   * @warning Do not overload since timig stats are automatically gathered thru
+   * this interface
+   */
+  virtual void _runDetect();
 };
 
 #endif /* FEATURE_DETECTOR_H */
