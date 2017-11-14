@@ -6,75 +6,70 @@
 * @brief Feature Detection Benchmark
 *
 */
-#include <iostream>
 #include <dirent.h>
+#include <iostream>
 
 // External
 #include <opencv2/core/core.hpp>
 #include <opencv2/features2d/features2d.hpp>
-#include <opencv2/xfeatures2d.hpp>
-#include <opencv2/objdetect/objdetect.hpp>
 #include <opencv2/highgui/highgui.hpp>
+#include <opencv2/objdetect/objdetect.hpp>
+#include <opencv2/xfeatures2d.hpp>
 
-#include <opencv2/imgcodecs.hpp>
 #include <opencv2/highgui.hpp>
+#include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc.hpp>
 
 // Internal
-#include <Timing.hpp>
 #include <Debug.hpp>
-#include <detectors/SurfDetect.hpp>
-#include <detectors/SiftDetect.hpp>
-#include <detectors/MSDDetectorDetect.hpp>
-#include <detectors/StarDetectorDetect.hpp>
-#include <detectors/VggDetect.hpp>
-#include <detectors/HarrisCornerDetect.hpp>
-#include <detectors/LucidDetect.hpp>
-#include <detectors/SimpleBlobDetect.hpp>
-#include <detectors/CannyDetect.hpp>
-#include <detectors/ThresholdDetect.hpp>
+#include <Timing.hpp>
 #include <detectors/AdaptativeThresholdDetect.hpp>
-#include <detectors/SegmentationDetect.hpp>
+#include <detectors/CannyDetect.hpp>
+#include <detectors/FastDetect.hpp>
 #include <detectors/FindContourDetect.hpp>
-#include <detectors/RoadDetect.hpp>
+#include <detectors/HarrisCornerDetect.hpp>
+#include <detectors/HarrisLaplaceDetect.hpp>
+#include <detectors/HoughDetect.hpp>
+#include <detectors/KMeanDetect.hpp>
+#include <detectors/LucidDetect.hpp>
+#include <detectors/MSDDetectorDetect.hpp>
 #include <detectors/OtsuThresholdDetect.hpp>
+#include <detectors/RoadDetect.hpp>
+#include <detectors/SegmentationDetect.hpp>
+#include <detectors/SiftDetect.hpp>
+#include <detectors/SimpleBlobDetect.hpp>
+#include <detectors/StarDetectorDetect.hpp>
+#include <detectors/SurfDetect.hpp>
+#include <detectors/ThresholdDetect.hpp>
+#include <detectors/VggDetect.hpp>
 
 using namespace cv;
 using namespace cv::xfeatures2d;
 using namespace std;
 
 static const String keys =
-       "{help h usage ? |      | Print this message   }"
-       "{v              |      | Verbose              }"
-       "{in             |      | Input Image Path     }"
-       "{indir          |      | Input Directory Path }"
-       "{show           |      | Display images       }"
-       "{all            |      | All Detectors Enable }"
-       SURF_OPTIONS
-       SIFT_OPTIONS
-       MSDDETECTORDETECT_OPTIONS
-       VGGDETECT_OPTIONS
-       HARRISCORNERDETECT_OPTIONS
-       LUCID_OPTIONS
-       STARDETECTOR_OPTIONS
-       SIMPLEBLOB_OPTIONS
-       CANNY_OPTIONS
-       THRESHOLD_OPTIONS
-       SEGMENTATION_OPTIONS
-       FINDCONTOUR_OPTIONS
-       ROADDETECT_OPTIONS
-       ADAPTATIVTHRESHOLD_OPTIONS
-       OTSUTHRESHOLD_OPTIONS
-       ;
+    "{help h usage ? |      | Print this message    }"
+    "{v              |      | Verbose               }"
+    "{in             |      | Input Image Path      }"
+    "{out            |      | Output Image Path     }"
+    "{indir          |      | Input Directory Path  }"
+    "{outdir         |      | Output Directory Path }"
+    "{show           |      | Display images        }"
+    "{all            |      | All Detectors Enable  }" SURF_OPTIONS SIFT_OPTIONS
+        MSDDETECTORDETECT_OPTIONS VGGDETECT_OPTIONS HARRISCORNERDETECT_OPTIONS
+            LUCID_OPTIONS STARDETECTOR_OPTIONS SIMPLEBLOB_OPTIONS CANNY_OPTIONS
+                THRESHOLD_OPTIONS SEGMENTATION_OPTIONS FINDCONTOUR_OPTIONS
+                    ROADDETECT_OPTIONS ADAPTATIVTHRESHOLD_OPTIONS
+                        OTSUTHRESHOLD_OPTIONS KMEANS_OPTIONS FAST_OPTIONS
+                            HARRISLAPLACEDETECT_OPTIONS HOUGH_OPTIONS;
 
-
-int main( int argc, char** argv ) {
+int main(int argc, char **argv) {
   Mat inputImage, inputImageColor;
   int k = 0;
   CommandLineParser parser(argc, argv, keys);
   string inputImagePath = parser.get<string>("in");
-  vector<FeatureDetect*> algGrayScalePool, algColorPool;
-  vector<string> lInputImagePath;
+  vector<FeatureDetect *> algGrayScalePool, algColorPool;
+  vector<string> lInputImagePath, lOutputImagePath;
   DIR *dir;
   struct dirent *ent;
   bool enableGui = parser.has("show") && !parser.has("indir");
@@ -83,12 +78,16 @@ int main( int argc, char** argv ) {
   FeatureDetect::enableLog(parser.has("v"));
 
   if (parser.has("v")) {
-    cout << "OpenCV Version: " << CV_MAJOR_VERSION << "." << CV_MINOR_VERSION << endl;
+    cout << "OpenCV Version: " << CV_MAJOR_VERSION << "." << CV_MINOR_VERSION
+         << endl;
 
     cout << "C++ Standard: ";
-    if( __cplusplus == 201103L ) cout << "C++11" << endl;
-    else if( __cplusplus == 19971L ) cout << "C++98" << endl;
-    else cout << "pre-standard C++" << endl;
+    if (__cplusplus == 201103L)
+      cout << "C++11" << endl;
+    else if (__cplusplus == 19971L)
+      cout << "C++98" << endl;
+    else
+      cout << "pre-standard C++" << endl;
   }
 
   if (!(parser.has("in") || parser.has("indir"))) {
@@ -98,6 +97,10 @@ int main( int argc, char** argv ) {
 
   if (parser.has("in")) {
     lInputImagePath.push_back(parser.get<string>("in"));
+
+    if (parser.has("out")) {
+      lOutputImagePath.push_back(parser.get<string>("out"));
+    }
   }
 
   if (parser.has("indir")) {
@@ -109,18 +112,27 @@ int main( int argc, char** argv ) {
           continue;
         }
 
-        lInputImagePath.push_back(parser.get<string>("indir") + "/" + ent->d_name);
+        lInputImagePath.push_back(parser.get<string>("indir") + "/" +
+                                  ent->d_name);
+
+        if (!parser.has("outdir")) {
+          continue;
+        }
+
+        lOutputImagePath.push_back(parser.get<string>("outdir") + "/" +
+                                   ent->d_name);
       }
-      closedir (dir);
+      closedir(dir);
     } else {
       /* could not open directory */
-      perror ("");
+      perror("");
       return EXIT_FAILURE;
     }
   }
 
   // Add all algorithms to the pool (COLOR ONLY)
   algColorPool.push_back(new LucidDetect(parser));
+  algColorPool.push_back(new KMeanDetect(parser));
 
   // Add all algorithms to the pool (GRAY SCALE ONLY)
   algGrayScalePool.push_back(new FindContourDetect(parser));
@@ -137,13 +149,19 @@ int main( int argc, char** argv ) {
   algGrayScalePool.push_back(new RoadDetect(parser));
   algGrayScalePool.push_back(new AdaptativeThresholdDetect(parser));
   algGrayScalePool.push_back(new OtsuThresholdDetect(parser));
+  algGrayScalePool.push_back(new FastDetect(parser));
+  algGrayScalePool.push_back(new HarrisLaplaceDetect(parser));
+  algGrayScalePool.push_back(new HoughDetect(parser));
 
-  for (int i = 0; i < lInputImagePath.size(); i++) {
-    inputImage = imread(lInputImagePath[i], CV_LOAD_IMAGE_COLOR);
+  for (int idx = 0; idx < lInputImagePath.size(); idx++) {
+
+    Debug::printMessage("Reading - " + lInputImagePath[idx]);
+
+    inputImage = imread(lInputImagePath[idx], CV_LOAD_IMAGE_COLOR);
 
     if (inputImage.empty()) {
       cout << "Oopps! Couldn't read the inputImage!" << endl;
-      return 0;
+      continue;
     }
 
     TRACE_LINE(__FILE__, __LINE__);
@@ -157,7 +175,16 @@ int main( int argc, char** argv ) {
 
     // Run all color detections
     for (int i = 0; i < algColorPool.size(); i++) {
+      if (!algColorPool[i]->getEnable()) {
+        continue;
+      }
+
       algColorPool[i]->detect(inputImage);
+
+      if (idx < lOutputImagePath.size()) {
+        algColorPool[i]->writeImage(lOutputImagePath[idx]);
+        Debug::printMessage("Writting - " + lOutputImagePath[idx]);
+      }
     }
 
     TRACE_LINE(__FILE__, __LINE__);
@@ -173,7 +200,16 @@ int main( int argc, char** argv ) {
 
     // Run all grary scale detection
     for (int i = 0; i < algGrayScalePool.size(); i++) {
+      if (!algGrayScalePool[i]->getEnable()) {
+        continue;
+      }
+
       algGrayScalePool[i]->detect(inputImage);
+
+      if (idx < lOutputImagePath.size()) {
+        algGrayScalePool[i]->writeImage(lOutputImagePath[idx]);
+        Debug::printMessage("Writting - " + lOutputImagePath[idx]);
+      }
     }
 
     TRACE_LINE(__FILE__, __LINE__);
@@ -181,10 +217,20 @@ int main( int argc, char** argv ) {
 
   for (int i = 0; i < algColorPool.size(); i++) {
     algColorPool[i]->printStats();
+
+    if (parser.has("outdir")) {
+      algColorPool[i]->dumpStatsToFile(parser.get<string>("outdir") +
+                                       "/stats.txt");
+    }
   }
 
   for (int i = 0; i < algGrayScalePool.size(); i++) {
     algGrayScalePool[i]->printStats();
+
+    if (parser.has("outdir")) {
+      algGrayScalePool[i]->dumpStatsToFile(parser.get<string>("outdir") +
+                                           "/stats.txt");
+    }
   }
 
   cout << "Benchmark Finished" << endl;

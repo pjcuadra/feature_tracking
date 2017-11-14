@@ -9,8 +9,8 @@
 #ifndef SIFTDETECT_H
 #define SIFTDETECT_H
 
-#include <opencv2/core/utility.hpp>
 #include <opencv2/core/core.hpp>
+#include <opencv2/core/utility.hpp>
 #include <opencv2/xfeatures2d/nonfree.hpp>
 
 #include <detectors/FeatureDetect.hpp>
@@ -23,9 +23,9 @@ using namespace std;
 
 class SiftDetect : public FeatureDetect {
 public:
-  SiftDetect(CommandLineParser parser) :
-  FeatureDetect(parser, "SIFT", "sift") {
+  SiftDetect(CommandLineParser parser) : FeatureDetect(parser, "SIFT", "sift") {
     this->detector = SIFT::create();
+    paramsString << "  Defaults";
   }
 };
 

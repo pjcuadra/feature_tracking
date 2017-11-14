@@ -1,22 +1,23 @@
 /**
-* @file FeatureDetect.hpp
-* @author Pedro Cuadra
-* @date 5 Nov 2017
-* @copyright 2017 Pedro Cuadra
-* @brief Feature Detector Class
-*
-*/
+ * @file FeatureDetect.hpp
+ * @author Pedro Cuadra
+ * @date 5 Nov 2017
+ * @copyright 2017 Pedro Cuadra
+ * @brief Feature Detector Class
+ *
+ */
 #ifndef FEATURE_DETECTOR_H
 #define FEATURE_DETECTOR_H
 
 #include <iostream>
 #include <list>
 
-#include <opencv2/core/utility.hpp>
 #include <opencv2/core/core.hpp>
-#include <opencv2/xfeatures2d.hpp>
+#include <opencv2/core/utility.hpp>
 #include <opencv2/highgui.hpp>
+#include <opencv2/xfeatures2d.hpp>
 
+#include <Stats.hpp>
 #include <Timing.hpp>
 
 using namespace cv;
@@ -53,8 +54,13 @@ public:
 
   static void enableLog(bool enable);
 
-protected:
+  virtual void writeImage(string path);
 
+  bool getEnable();
+
+  void dumpStatsToFile(string path);
+
+protected:
   /** Detector */
   Ptr<Feature2D> detector;
   /** Detector */
@@ -71,7 +77,8 @@ protected:
   string name;
   Mat outputImage;
   stringstream paramsString;
-
+  stringstream statsString;
+  Stats<int> keyPointsStats;
 
   virtual void runCompute();
 
@@ -103,14 +110,12 @@ protected:
    */
   virtual void updateOutputImage();
 
-  virtual void printLog(string message);
+  void printLog(string message);
 
   virtual void createControls();
   void drawOutput();
 
 private:
-  vector<double> timeDeltas;
-
   /**
    * @brief <brief>
    * @param [in] <name> <parameter_description>
@@ -118,9 +123,9 @@ private:
    * @details <details>
    */
   virtual void show();
+  void generateStatsString();
 
-
-
+  Stats<double> timingStats;
 };
 
 #endif /* FEATURE_DETECTOR_H */

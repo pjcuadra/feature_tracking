@@ -9,8 +9,8 @@
 #ifndef SIMPLEBLOBDETECT_H
 #define SIMPLEBLOBDETECT_H
 
-#include <opencv2/core/utility.hpp>
 #include <opencv2/core/core.hpp>
+#include <opencv2/core/utility.hpp>
 
 #include <detectors/FeatureDetect.hpp>
 
@@ -22,8 +22,8 @@ using namespace std;
 
 class SimpleBlobDetect : public FeatureDetect {
 public:
-  SimpleBlobDetect(CommandLineParser parser) :
-  FeatureDetect(parser, "SimpleBlob", "sblob") {
+  SimpleBlobDetect(CommandLineParser parser)
+      : FeatureDetect(parser, "SimpleBlob", "sblob") {
     SimpleBlobDetector::Params params;
 
     // params.filterByArea = false;

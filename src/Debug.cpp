@@ -8,18 +8,18 @@
 */
 #include <Debug.hpp>
 
+#define DEBUG_PREPEND "[debug] "
+
 bool Debug::enable = false;
 
-void Debug::setEnable(bool enableVal) {
-  enable = enableVal;
-}
+void Debug::setEnable(bool enableVal) { enable = enableVal; }
 
 void Debug::printMessage(string message) {
   if (!enable) {
     return;
   }
 
-  cout << message << endl;
+  cout << DEBUG_PREPEND << message << endl;
 }
 
 void Debug::addPoint(string file, int line) {
@@ -27,7 +27,7 @@ void Debug::addPoint(string file, int line) {
     return;
   }
 
-  cout << file << " (" << line << ")" << endl;
+  cout << DEBUG_PREPEND << file << " (" << line << ")" << endl;
 }
 
 void Debug::addPoint(string file, int line, string message) {
@@ -35,5 +35,5 @@ void Debug::addPoint(string file, int line, string message) {
     return;
   }
 
-  cout << file << " (" << line << ") - " << message << endl;
+  cout << DEBUG_PREPEND << file << " (" << line << ") - " << message << endl;
 }

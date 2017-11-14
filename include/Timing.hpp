@@ -9,35 +9,28 @@
 #ifndef TIMING_H
 #define TIMING_H
 
-#include <iostream>
 #include <chrono>
+#include <iostream>
 
 using namespace std;
 using namespace std::chrono;
 
 class Timing {
 public:
-
-  void start() {
-    startTime = high_resolution_clock::now();
-  }
+  void start() { startTime = high_resolution_clock::now(); }
 
   void end() {
     endTime = high_resolution_clock::now();
-    elapsedTime = duration_cast<second> (endTime - startTime).count();
+    elapsedTime = duration_cast<second>(endTime - startTime).count();
   }
 
-  void print() {
-    cout << "Elapsed time: " << elapsedTime << "s" << endl;
-  }
+  void print() { cout << "Elapsed time: " << elapsedTime << "s" << endl; }
 
-  double getDelta() {
-    return this->elapsedTime;
-  }
+  double getDelta() { return this->elapsedTime; }
 
 private:
   typedef high_resolution_clock clock;
-  typedef duration<double, std::ratio<1> > second;
+  typedef duration<double, std::ratio<1>> second;
   time_point<clock> startTime;
   time_point<clock> endTime;
   double elapsedTime;

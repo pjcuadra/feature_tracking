@@ -6,6 +6,9 @@
 * @brief Feature Detect clas implementation
 *
 */
+
+#include <fstream>
+
 #include <detectors/FeatureDetect.hpp>
 
 #include <Debug.hpp>
@@ -15,15 +18,17 @@ using namespace std;
 
 bool FeatureDetect::debug = false;
 
-FeatureDetect::FeatureDetect(CommandLineParser parser, string name) {
+FeatureDetect::FeatureDetect(CommandLineParser parser, string name)
+    : timingStats(name + " - Timing", "s"),
+      keyPointsStats(name + " - Keypoints", "") {
   this->showEnable = parser.has("show") && !parser.has("indir");
   this->name = name;
   this->allEnable = parser.has("all");
 }
 
-FeatureDetect::FeatureDetect(CommandLineParser parser,
-  string name,
-  string enableFlag) : FeatureDetect(parser, name) {
+FeatureDetect::FeatureDetect(CommandLineParser parser, string name,
+                             string enableFlag)
+    : FeatureDetect(parser, name) {
   this->enable = parser.has(enableFlag);
 }
 
@@ -39,7 +44,7 @@ void FeatureDetect::printLog(string message) {
     return;
   }
 
-  cout << "  [log] "  << this->name << ": " << message << endl;
+  cout << "  [log] " << this->name << ": " << message << endl;
 }
 
 void FeatureDetect::_runCompute() {
@@ -54,7 +59,7 @@ void FeatureDetect::_runDetect() {
 void FeatureDetect::runDetect() {
   Timing timing;
   if (!(this->enable || this->allEnable)) {
-      return;
+    return;
   }
 
   printLog("Running FeatureDetect::runDetect");
@@ -64,11 +69,15 @@ void FeatureDetect::runDetect() {
   timing.end();
 
   this->collectStats(timing.getDelta());
+
+  if (keyPoints.size()) {
+    this->keyPointsStats.push_back(keyPoints.size());
+  }
 }
 
 void FeatureDetect::detect(Mat inputImage) {
   if (!(this->enable || this->allEnable)) {
-      return;
+    return;
   }
 
   printLog("Running FeatureDetect::detect");
@@ -77,11 +86,8 @@ void FeatureDetect::detect(Mat inputImage) {
 }
 
 void FeatureDetect::updateOutputImage() {
-  drawKeypoints(this->inputImage,
-    keyPoints,
-    this->outputImage,
-    Scalar::all(-1),
-    DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
+  drawKeypoints(this->inputImage, keyPoints, this->outputImage, Scalar::all(-1),
+                DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
 }
 
 void FeatureDetect::drawOutput() {
@@ -93,11 +99,12 @@ void FeatureDetect::drawOutput() {
 
 void FeatureDetect::show() {
   if (!(this->enable || this->allEnable)) {
-      return;
+    return;
   }
 
   if (!this->showEnable) {
-      return;
+    updateOutputImage();
+    return;
   }
 
   printLog("Running FeatureDetect::show");
@@ -115,7 +122,7 @@ void FeatureDetect::show() {
 
 void FeatureDetect::runCompute() {
   if (!(this->enable || this->allEnable)) {
-      return;
+    return;
   }
 
   printLog("Running FeatureDetect::runCompute");
@@ -123,49 +130,57 @@ void FeatureDetect::runCompute() {
   this->_runCompute();
 }
 
-string FeatureDetect::getName() {
-  return this->name;
-}
+string FeatureDetect::getName() { return this->name; }
 
 // TODO: Refactor this to be a separate class or use an existing one
-void FeatureDetect::printStats() {
-  double sum = accumulate(timeDeltas.begin(), timeDeltas.end(), 0.0);
-  double mean = 0;
-  vector<double> diff(timeDeltas.size());
-  double stdDev = 0, sq_sum = 0;
-  double max = 0;
-  double min = 0;
+void FeatureDetect::generateStatsString() {}
 
+void FeatureDetect::printStats() {
   if (!(this->enable || this->allEnable)) {
-      return;
+    return;
   }
 
-  printLog("Running FeatureDetect::printStats");
+  if (paramsString.str().size()) {
+    cout << this->name << " - Params:" << endl;
+    cout << paramsString.str();
+  }
 
-  mean = sum / timeDeltas.size();
-  max = *max_element(timeDeltas.begin(), timeDeltas.end());
-  min = *min_element(timeDeltas.begin(), timeDeltas.end());
+  cout << timingStats.str();
+  cout << keyPointsStats.str();
+  generateStatsString();
+  cout << statsString.str();
+}
 
-  transform(timeDeltas.begin(), timeDeltas.end(), diff.begin(), [mean](double x) { return x - mean; });
+void FeatureDetect::dumpStatsToFile(string path) {
+  if (!(this->enable || this->allEnable)) {
+    return;
+  }
+  ofstream outFile(path, std::ofstream::app);
 
-  sq_sum = inner_product(diff.begin(), diff.end(), diff.begin(), 0.0);
-  stdDev = sqrt(sq_sum / timeDeltas.size());
+  if (paramsString.str().size()) {
+    outFile << this->name << " - Params:" << endl;
+    outFile << paramsString.str();
+  }
 
-  cout << this->name << " - Stats: " << endl;
-  cout << "  " << "Data Set size: " << timeDeltas.size() << endl;
-  cout << "  " << "Mean: " << mean << endl;
-  cout << "  " << "Std. Dev.: " << stdDev << endl;
-  cout << "  " << "Range: [" << max << ", " << min << "]"<< endl;
+  outFile << timingStats.str();
+  outFile << keyPointsStats.str();
+  generateStatsString();
+  outFile << statsString.str();
 }
 
 void FeatureDetect::collectStats(double delta) {
-  this->timeDeltas.push_back(delta);
+  this->timingStats.push_back(delta);
 }
 
-void FeatureDetect::createControls() {
+void FeatureDetect::createControls() {}
 
+void FeatureDetect::enableLog(bool enable) { FeatureDetect::debug = enable; }
+
+void FeatureDetect::writeImage(string path) {
+  if (!(this->enable || this->allEnable)) {
+    return;
+  }
+  imwrite(path, this->outputImage);
 }
 
-void FeatureDetect::enableLog(bool enable) {
-  FeatureDetect::debug = enable;
-}
+bool FeatureDetect::getEnable() { return this->enable || this->allEnable; }

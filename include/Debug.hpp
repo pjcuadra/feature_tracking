@@ -9,8 +9,8 @@
 #ifndef DEBUG_H
 #define DEBUG_H
 
-#include <iostream>
 #include <chrono>
+#include <iostream>
 
 using namespace std;
 
@@ -28,7 +28,6 @@ public:
   static void addPoint(string file, int line);
 
   static void addPoint(string file, int line, string message);
-
 };
 
 #endif /* DEBUG_H */

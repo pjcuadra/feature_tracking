@@ -9,8 +9,8 @@
 #ifndef STARDETECTORDETECT_H
 #define STARDETECTORDETECT_H
 
-#include <opencv2/core/utility.hpp>
 #include <opencv2/core/core.hpp>
+#include <opencv2/core/utility.hpp>
 
 #include <detectors/FeatureDetect.hpp>
 
@@ -18,12 +18,13 @@ using namespace cv;
 using namespace cv::xfeatures2d;
 using namespace std;
 
-#define STARDETECTOR_OPTIONS "{star         |      | StarDetector Enable        }"
+#define STARDETECTOR_OPTIONS                                                   \
+  "{star         |      | StarDetector Enable        }"
 
 class StarDetectorDetect : public FeatureDetect {
 public:
-  StarDetectorDetect(CommandLineParser parser) :
-  FeatureDetect(parser, "StarDetector", "star") {
+  StarDetectorDetect(CommandLineParser parser)
+      : FeatureDetect(parser, "StarDetector", "star") {
     this->detector = StarDetector::create();
   }
 };

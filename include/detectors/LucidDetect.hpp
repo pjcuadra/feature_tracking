@@ -9,9 +9,9 @@
 #ifndef LUCIDDETECT_H
 #define LUCIDDETECT_H
 
-#include <opencv2/core/utility.hpp>
-#include <opencv2/core/core.hpp>
 #include <detectors/FeatureDetect.hpp>
+#include <opencv2/core/core.hpp>
+#include <opencv2/core/utility.hpp>
 
 using namespace cv;
 using namespace cv::xfeatures2d;
@@ -21,15 +21,13 @@ using namespace std;
 
 class LucidDetect : public FeatureDetect {
 public:
-  LucidDetect(CommandLineParser parser) :
-  FeatureDetect(parser, "LUCID", "lucid") {
+  LucidDetect(CommandLineParser parser)
+      : FeatureDetect(parser, "LUCID", "lucid") {
     this->detector = LUCID::create();
   }
 
 protected:
-  virtual void _runDetect() {
-    FeatureDetect::runCompute();
-  }
+  virtual void _runDetect() { FeatureDetect::runCompute(); }
 };
 
 #endif /* LUCIDDETECT_H */

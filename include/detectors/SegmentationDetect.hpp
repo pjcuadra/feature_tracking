@@ -9,8 +9,8 @@
 #ifndef SEGMENTATIONDETECT_H
 #define SEGMENTATIONDETECT_H
 
-#include <opencv2/core/utility.hpp>
 #include <opencv2/core/core.hpp>
+#include <opencv2/core/utility.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 
@@ -20,12 +20,13 @@ using namespace cv;
 using namespace cv::xfeatures2d;
 using namespace std;
 
-#define SEGMENTATION_OPTIONS "{segment         |      | Segmentation Enable          }"
+#define SEGMENTATION_OPTIONS                                                   \
+  "{segment         |      | Segmentation Enable          }"
 
 class SegmentationDetect : public FeatureDetect {
 public:
-  SegmentationDetect(CommandLineParser parser) :
-  FeatureDetect(parser, "Segmentation", "segment") {
+  SegmentationDetect(CommandLineParser parser)
+      : FeatureDetect(parser, "Segmentation", "segment") {
     SimpleBlobDetector::Params params;
 
     // params.filterByArea = false;
@@ -52,23 +53,16 @@ public:
 protected:
   virtual void _runDetect() {
     blur(this->inputImage, this->tmpImage, Size(100, 100));
-    threshold(this->tmpImage,
-      this->tmpImage,
-      0,
-      255,
-      THRESH_BINARY | THRESH_OTSU);
+    threshold(this->tmpImage, this->tmpImage, 0, 255,
+              THRESH_BINARY | THRESH_OTSU);
     this->detector->detect(this->tmpImage, this->keyPoints);
   }
 
   virtual void updateOutputImage() {
     cvtColor(this->tmpImage, this->outputImage, CV_GRAY2RGB);
 
-    drawKeypoints(this->outputImage,
-      this->keyPoints,
-      this->outputImage,
-      Scalar::all(-1),
-      DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
-
+    drawKeypoints(this->outputImage, this->keyPoints, this->outputImage,
+                  Scalar::all(-1), DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
   }
 
 private:

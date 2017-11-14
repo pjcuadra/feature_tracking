@@ -9,8 +9,8 @@
 #ifndef FINDCONTOURDETECT_H
 #define FINDCONTOURDETECT_H
 
-#include <opencv2/core/utility.hpp>
 #include <opencv2/core/core.hpp>
+#include <opencv2/core/utility.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 
@@ -20,43 +20,35 @@ using namespace cv;
 using namespace cv::xfeatures2d;
 using namespace std;
 
-#define FINDCONTOUR_OPTIONS "{findcontour      |      | Find Contour Enable          }"
+#define FINDCONTOUR_OPTIONS                                                    \
+  "{findcontour      |      | Find Contour Enable          }"
 
 class FindContourDetect : public FeatureDetect {
 public:
-
-  FindContourDetect(CommandLineParser parser) :
-  FeatureDetect(parser, "FindContour", "findcontour") {
-  }
-
-
+  FindContourDetect(CommandLineParser parser)
+      : FeatureDetect(parser, "FindContour", "findcontour") {}
 
 protected:
+  void setFill(bool enable) { this->fill = enable; }
 
-  void setFill(bool enable) {
-    this->fill = enable;
-  }
-
-  bool getFill() {
-    return this->fill;
-  }
+  bool getFill() { return this->fill; }
 
   void createColorsVector() {
     colorsVec.clear();
 
-    for(int idx = 0 ; idx < contours0.size(); idx++ ) {
-      colorsVec.push_back(Scalar( rand()&255, rand()&255, rand()&255));
+    for (int idx = 0; idx < contours0.size(); idx++) {
+      colorsVec.push_back(Scalar(rand() & 255, rand() & 255, rand() & 255));
     }
   }
 
   virtual void _runDetect() {
+    // Pixels classification
     blur(this->inputImage, this->tmpImg, Size(100, 100));
     threshold(this->tmpImg, this->tmpImg, 0, 255, THRESH_BINARY | THRESH_OTSU);
-    findContours(this->tmpImg,
-      contours0,
-      hierarchy,
-      RETR_TREE,
-      CHAIN_APPROX_SIMPLE);
+
+    // Segmantation
+    findContours(this->tmpImg, contours0, hierarchy, RETR_TREE,
+                 CHAIN_APPROX_SIMPLE);
 
     this->createColorsVector();
   }
@@ -64,27 +56,18 @@ protected:
   virtual void updateOutputImage() {
     cvtColor(this->inputImage, this->outputImage, CV_GRAY2RGB);
 
-    for(int idx = 0 ; idx < contours0.size(); idx++ ) {
-        if (getFill()) {
-          drawContours(this->outputImage,
-            contours0,
-            idx,
-            colorsVec[idx],
-            FILLED,
-            8,
-            hierarchy);
-        } else {
-          drawContours(this->outputImage,
-            contours0,
-            idx,
-            colorsVec[idx],
-            10);
-        }
+    for (int idx = 0; idx < contours0.size(); idx++) {
+      if (getFill()) {
+        drawContours(this->outputImage, contours0, idx, colorsVec[idx], FILLED,
+                     8, hierarchy);
+      } else {
+        drawContours(this->outputImage, contours0, idx, colorsVec[idx], 20);
+      }
     }
   }
 
-  static void onClick(int state, void* ptr) {
-    FindContourDetect * that = (FindContourDetect *) ptr;
+  static void onClick(int state, void *ptr) {
+    FindContourDetect *that = (FindContourDetect *)ptr;
 
     that->setFill(state != 0);
     that->drawOutput();
@@ -95,12 +78,11 @@ protected:
   }
 
 private:
-  vector<vector<Point> > contours0;
+  vector<vector<Point>> contours0;
   vector<Vec4i> hierarchy;
   Mat tmpImg;
   vector<Scalar> colorsVec;
-  bool fill;
-
+  bool fill = false;
 };
 
 #endif /* FINDCONTOURDETECT_H */
