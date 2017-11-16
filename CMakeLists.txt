@@ -81,9 +81,9 @@ include_directories(${CMAKE_SOURCE_DIR}/include)
 # Add all detectors sources
 file(GLOB_RECURSE DETECTOR_SOURCES ${CMAKE_SOURCE_DIR}/src/detectors/*.cpp)
 
-add_executable(feature_det_bench
-  ${CMAKE_SOURCE_DIR}/src/featureDetectorBenchmark.cpp
+add_executable(feature_detector_sample
+  ${CMAKE_SOURCE_DIR}/src/featureDetectorSample.cpp
   ${CMAKE_SOURCE_DIR}/src/Debug.cpp
   ${DETECTOR_SOURCES}
 )
-target_link_libraries(feature_det_bench ${OpenCV_LIBS})
+target_link_libraries(feature_detector_sample ${OpenCV_LIBS})
