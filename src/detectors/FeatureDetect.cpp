@@ -26,12 +26,10 @@
 
 #include <detectors/FeatureDetect.hpp>
 
-#include <Debug.hpp>
+#include <util/Debug.hpp>
 
 using namespace cv::xfeatures2d;
 using namespace std;
-
-bool FeatureDetect::debug = false;
 
 /**
  * Feature Detection Wrapper Class
@@ -39,7 +37,7 @@ bool FeatureDetect::debug = false;
 FeatureDetect::FeatureDetect(CommandLineParser parser, string name)
     : timingStats(name + " - Timing", "s"),
       keyPointsStats(name + " - Keypoints", "") {
-  this->showEnable = parser.has("show") && !parser.has("indir");
+  this->showEnable = parser.has("show");
   this->name = name;
   this->allEnable = parser.has("all");
 }
@@ -68,7 +66,7 @@ void FeatureDetect::_runCompute() {
     return;
   }
 
-  printLog("Running FeatureDetect::_runCompute");
+  STACK_TRACE(__FUNCTION__);
 
   this->runCompute();
 }
@@ -77,7 +75,7 @@ void FeatureDetect::_runCompute() {
  * Run feature detection algorithm
  */
 void FeatureDetect::runDetect() {
-  TRACE_LINE(__FILE__, __LINE__);
+  STACK_TRACE(__FUNCTION__);
   detector->detect(this->inputImage, this->keyPoints);
 }
 
@@ -90,7 +88,7 @@ void FeatureDetect::_runDetect() {
     return;
   }
 
-  printLog("Running FeatureDetect::_runDetect");
+  STACK_TRACE(__FUNCTION__);
 
   timing.start();
   this->runDetect();
@@ -111,9 +109,23 @@ void FeatureDetect::detect(Mat inputImage) {
     return;
   }
 
-  printLog("Running FeatureDetect::detect");
+  STACK_TRACE(__FUNCTION__);
   inputImage.copyTo(this->inputImage);
   this->_runDetect();
+  this->show();
+}
+
+/**
+ * Apply detection algorithm
+ */
+void FeatureDetect::compute(Mat inputImage) {
+  STACK_TRACE(__FUNCTION__);
+  if (!(this->enable || this->allEnable)) {
+    return;
+  }
+
+  inputImage.copyTo(this->inputImage);
+  this->_runCompute();
   this->show();
 }
 
@@ -121,6 +133,7 @@ void FeatureDetect::detect(Mat inputImage) {
  * Re-apply the detection algorithm to the stored input image
  */
 void FeatureDetect::redetect() {
+  STACK_TRACE(__FUNCTION__);
   this->_runDetect();
   this->drawOutput();
 }
@@ -129,6 +142,7 @@ void FeatureDetect::redetect() {
  * Update the output image
  */
 void FeatureDetect::updateOutputImage() {
+  STACK_TRACE(__FUNCTION__);
   drawKeypoints(this->inputImage, keyPoints, this->outputImage, Scalar::all(-1),
                 DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
 }
@@ -137,7 +151,7 @@ void FeatureDetect::updateOutputImage() {
  * Draw ouput image to the GUI
  */
 void FeatureDetect::drawOutput() {
-  printLog("Running FeatureDetect::drawOutput");
+  STACK_TRACE(__FUNCTION__);
   updateOutputImage();
 
   imshow(this->name, this->outputImage);
@@ -147,6 +161,7 @@ void FeatureDetect::drawOutput() {
  * Show the GUI
  */
 void FeatureDetect::show() {
+  STACK_TRACE(__FUNCTION__);
   if (!(this->enable || this->allEnable)) {
     return;
   }
@@ -156,7 +171,7 @@ void FeatureDetect::show() {
     return;
   }
 
-  printLog("Running FeatureDetect::show");
+  Debug::printMessage("Running FeatureDetect::show");
 
   if (paramsString.str().size()) {
     cout << this->name << " - Params:" << endl;
@@ -196,6 +211,7 @@ void FeatureDetect::printStats() {
  * Dump stats to file
  */
 void FeatureDetect::dumpStatsToFile(string path) {
+  STACK_TRACE(__FUNCTION__);
   if (!(this->enable || this->allEnable)) {
     return;
   }
@@ -215,6 +231,7 @@ void FeatureDetect::dumpStatsToFile(string path) {
  * Collect timing stats
  */
 void FeatureDetect::collectStats(double delta) {
+  STACK_TRACE(__FUNCTION__);
   this->timingStats.push_back(delta);
 }
 
@@ -222,11 +239,6 @@ void FeatureDetect::collectStats(double delta) {
  * Create the window's controls
  */
 void FeatureDetect::createControls() {}
-
-/**
- * Enable logging
- */
-void FeatureDetect::enableLog(bool enable) { FeatureDetect::debug = enable; }
 
 /**
  * Write image to file
@@ -243,13 +255,6 @@ void FeatureDetect::writeImage(string path) {
  */
 bool FeatureDetect::getEnable() { return this->enable || this->allEnable; }
 
-/**
- * Print Log Message
- */
-void FeatureDetect::printLog(string message) {
-  if (!this->debug) {
-    return;
-  }
+vector<KeyPoint> FeatureDetect::getKeyPoints() { return this->keyPoints; }
 
-  cout << "  [log] " << this->name << ": " << message << endl;
-}
+Mat FeatureDetect::getDescriptors() { return this->descriptors; }

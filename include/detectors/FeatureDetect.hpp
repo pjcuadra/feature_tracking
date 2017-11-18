@@ -33,8 +33,8 @@
 #include <opencv2/highgui.hpp>
 #include <opencv2/xfeatures2d.hpp>
 
-#include <Stats.hpp>
-#include <Timing.hpp>
+#include <util/Stats.hpp>
+#include <util/Timing.hpp>
 
 using namespace cv;
 using namespace cv::xfeatures2d;
@@ -42,7 +42,6 @@ using namespace std;
 
 class FeatureDetect {
 public:
-  static bool debug;
   /**
    * Feature Detection Wrapper Class
    * @param parser Command line parser
@@ -65,6 +64,12 @@ public:
   void detect(Mat inputImage);
 
   /**
+   * Compute the descriptors
+   * @param inputImage Input image
+   */
+  void compute(Mat inputImage);
+
+  /**
    * Print statistics
    */
   void printStats();
@@ -82,12 +87,6 @@ public:
   string getName();
 
   /**
-   * Enable logging
-   * @param enable Enable state
-   */
-  static void enableLog(bool enable);
-
-  /**
    * Write image to file
    * @param path Path of the file to be written
    */
@@ -103,6 +102,18 @@ public:
    * @param path Path of the file to be written
    */
   void dumpStatsToFile(string path);
+
+  /**
+   * Get the obtained keypoints
+   * @return a vector containing all the keypoints
+   */
+  vector<KeyPoint> getKeyPoints();
+
+  /**
+   * Get the obtained descriptors
+   * @return obtained descriptors
+   */
+  Mat getDescriptors();
 
 protected:
   /** Detector */
@@ -149,12 +160,6 @@ protected:
    * Run feature detection algorithm
    */
   virtual void runDetect();
-
-  /**
-   * Print Log Message
-   * @param message Message to print
-   */
-  void printLog(string message);
 
   /**
    * Create the window's controls

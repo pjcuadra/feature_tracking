@@ -22,11 +22,14 @@
  * SOFTWARE.
  *
  */
-#include <Debug.hpp>
+#include <util/Debug.hpp>
 
 #define DEBUG_PREPEND "[debug] "
 
+using namespace std;
+
 bool Debug::enable = false;
+stringstream Debug::out("");
 
 /**
  * Set debug enable flag

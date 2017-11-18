@@ -37,8 +37,6 @@
 #include <opencv2/imgproc.hpp>
 
 // Internal
-#include <Debug.hpp>
-#include <Timing.hpp>
 #include <detectors/AdaptativeThresholdDetect.hpp>
 #include <detectors/CannyDetect.hpp>
 #include <detectors/FastDetect.hpp>
@@ -58,6 +56,8 @@
 #include <detectors/SurfDetect.hpp>
 #include <detectors/ThresholdDetect.hpp>
 #include <detectors/VggDetect.hpp>
+#include <util/Debug.hpp>
+#include <util/Timing.hpp>
 
 using namespace cv;
 using namespace cv::xfeatures2d;
@@ -84,8 +84,6 @@ static String keys =
 int main(int argc, char **argv) {
   Mat inputImage, inputImageColor;
   int k = 0;
-
-  keys += AdaptativeThresholdDetect::options;
   CommandLineParser parser(argc, argv, keys);
   string inputImagePath = parser.get<string>("in");
   vector<FeatureDetect *> algGrayScalePool, algColorPool;
@@ -95,7 +93,6 @@ int main(int argc, char **argv) {
   bool enableGui = parser.has("show") && !parser.has("indir");
 
   Debug::setEnable(parser.has("v"));
-  FeatureDetect::enableLog(parser.has("v"));
 
   if (parser.has("v")) {
     cout << "OpenCV Version: " << CV_MAJOR_VERSION << "." << CV_MINOR_VERSION
@@ -142,6 +139,8 @@ int main(int argc, char **argv) {
         lOutputImagePath.push_back(parser.get<string>("outdir") + "/" +
                                    ent->d_name);
       }
+
+      sort(lInputImagePath.begin(), lInputImagePath.end());
       closedir(dir);
     } else {
       /* could not open directory */

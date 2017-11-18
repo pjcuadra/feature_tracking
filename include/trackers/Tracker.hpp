@@ -22,12 +22,12 @@
  * SOFTWARE.
  *
  */
-#ifndef SURFDETECT_H
-#define SURFDETECT_H
+#ifndef TRACKER_H
+#define TRACKER_H
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/core/utility.hpp>
-#include <opencv2/xfeatures2d/nonfree.hpp>
+#include <opencv2/xfeatures2d.hpp>
 
 #include <detectors/FeatureDetect.hpp>
 
@@ -35,34 +35,52 @@ using namespace cv;
 using namespace cv::xfeatures2d;
 using namespace std;
 
-class SurfDetect : public FeatureDetect {
+class Tracker {
 public:
-  /** Comand line parser options */
-  static const String options;
+  Tracker(CommandLineParser parser, string name, Ptr<Feature2D> detector,
+          Ptr<DescriptorMatcher> matcher);
+  Tracker(CommandLineParser parser, string name, Ptr<Feature2D> detector);
+  Tracker(CommandLineParser parser, string name);
 
-  /**
-   * SURF feature detection
-   * @param parser Comand Line Parser
-   */
-  SurfDetect(CommandLineParser parser) : FeatureDetect(parser, "SURF", "surf") {
-    this->surfHessianTh = parser.get<int>("surf_h");
-    this->detector = SURF::create(this->surfHessianTh);
-    paramsString << "  Hessian Threshold: " << this->surfHessianTh << endl;
-  }
+  void track(Mat img1, Mat img2);
+  void track(Mat img1, Mat img2, int k);
 
-  SurfDetect(CommandLineParser parser, double newThreshold)
-      : FeatureDetect(parser, "SURF", "surf") {
-    this->surfHessianTh = newThreshold;
-    this->detector = SURF::create(newThreshold);
-    paramsString << "  Hessian Threshold: " << this->surfHessianTh << endl;
-  }
+  void matchesToKeypoints(vector<KeyPoint> &kp1, vector<KeyPoint> &kp2);
+  void matchesToPoints(vector<Point2f> &p1, vector<Point2f> &p2);
+
+  void setMatchingThreshold(double threshold);
+
+  void show();
+
+protected:
+  vector<KeyPoint> keypoints[2];
+  Mat descriptors[2];
+  Mat inputImage[2];
+
+  virtual void runExtract();
+
+  virtual void runTrack();
+
+  virtual void runFilter();
+
+  virtual void updateOutputImage();
 
 private:
-  /** SURF Hessian Threshold */
-  int surfHessianTh;
+  bool showEnable;
+  string name;
+  Ptr<Feature2D> detector;
+  Ptr<DescriptorMatcher> matcher;
+  vector<DMatch> matches;
+  Mat outputImage[3];
+  double goodTh;
+  double minDist;
+  double maxDist;
+
+  void _runExtract();
+
+  void _runTrack();
+
+  void _runFilter();
 };
 
-const String SurfDetect::options = "{surf   |     | SURF Enable    }"
-                                   "{surf_h | 400 | Display images }";
-
-#endif /* SURFDETECT_H */
+#endif /* TRACKER_H */

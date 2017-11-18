@@ -25,7 +25,8 @@ project(feature_tracking)
 # Define required cmake version
 cmake_minimum_required(VERSION 3.1)
 
-set (CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -rdynamic")
 
 # Include macros
 include("${CMAKE_SOURCE_DIR}/tools/cmake/git.cmake")
@@ -80,10 +81,29 @@ include_directories(${CMAKE_SOURCE_DIR}/include)
 
 # Add all detectors sources
 file(GLOB_RECURSE DETECTOR_SOURCES ${CMAKE_SOURCE_DIR}/src/detectors/*.cpp)
+file(GLOB_RECURSE TRACKERS_SOURCES ${CMAKE_SOURCE_DIR}/src/trackers/*.cpp)
+file(GLOB_RECURSE UTIL_SOURCES ${CMAKE_SOURCE_DIR}/src/util/*.cpp)
 
-add_executable(feature_detector_sample
-  ${CMAKE_SOURCE_DIR}/src/featureDetectorSample.cpp
-  ${CMAKE_SOURCE_DIR}/src/Debug.cpp
+add_executable(feature_detector_demo
+  ${CMAKE_SOURCE_DIR}/src/featureDetectorDemo.cpp
   ${DETECTOR_SOURCES}
+  ${TRACKERS_SOURCES}
+  ${UTIL_SOURCES}
 )
-target_link_libraries(feature_detector_sample ${OpenCV_LIBS})
+target_link_libraries(feature_detector_demo ${OpenCV_LIBS})
+
+# add_executable(klt_tracker_demo
+#   ${CMAKE_SOURCE_DIR}/src/kltTrackerDemo.cpp
+#   ${DETECTOR_SOURCES}
+#   ${TRACKERS_SOURCES}
+#   ${UTIL_SOURCES}
+# )
+# target_link_libraries(klt_tracker_demo ${OpenCV_LIBS})
+
+add_executable(surf_matching_demo
+  ${CMAKE_SOURCE_DIR}/src/surfMatchDemo.cpp
+  ${DETECTOR_SOURCES}
+  ${TRACKERS_SOURCES}
+  ${UTIL_SOURCES}
+)
+target_link_libraries(surf_matching_demo ${OpenCV_LIBS})

@@ -22,47 +22,59 @@
  * SOFTWARE.
  *
  */
-#ifndef SURFDETECT_H
-#define SURFDETECT_H
+#ifndef GRIDMOSAIC_H
+#define GRIDMOSAIC_H
 
+#include <chrono>
+#include <iostream>
 #include <opencv2/core/core.hpp>
 #include <opencv2/core/utility.hpp>
-#include <opencv2/xfeatures2d/nonfree.hpp>
+#include <util/Debug.hpp>
 
-#include <detectors/FeatureDetect.hpp>
-
-using namespace cv;
-using namespace cv::xfeatures2d;
 using namespace std;
+using namespace cv;
 
-class SurfDetect : public FeatureDetect {
+class GridMosaic {
 public:
-  /** Comand line parser options */
-  static const String options;
+  /**
+   * Constructor
+   * @param rows number of rows
+   * @param cols number of columns
+   */
+  GridMosaic(int rows, int cols, string name = "Grid Mosaic");
 
   /**
-   * SURF feature detection
-   * @param parser Comand Line Parser
+   * Set an image in the corresponing row and column
+   * @param row   row of the image
+   * @param col   column of the image
+   * @param image image
    */
-  SurfDetect(CommandLineParser parser) : FeatureDetect(parser, "SURF", "surf") {
-    this->surfHessianTh = parser.get<int>("surf_h");
-    this->detector = SURF::create(this->surfHessianTh);
-    paramsString << "  Hessian Threshold: " << this->surfHessianTh << endl;
-  }
+  void setImage(int rows, int cols, Mat image);
 
-  SurfDetect(CommandLineParser parser, double newThreshold)
-      : FeatureDetect(parser, "SURF", "surf") {
-    this->surfHessianTh = newThreshold;
-    this->detector = SURF::create(newThreshold);
-    paramsString << "  Hessian Threshold: " << this->surfHessianTh << endl;
-  }
+  /**
+   * Create the mosaic image
+   * @return Mosaic image
+   */
+  Mat create();
+
+  /**
+   * Display the window
+   */
+  void show();
+
+protected:
+  /* Images storage */
+  vector<vector<Mat>> images;
+  /* Window name */
+  string name;
+
+  void checkRowCol(int row, int col);
 
 private:
-  /** SURF Hessian Threshold */
-  int surfHessianTh;
+  /* Number of Rows */
+  int rows;
+  /* Number of columns */
+  int cols;
 };
 
-const String SurfDetect::options = "{surf   |     | SURF Enable    }"
-                                   "{surf_h | 400 | Display images }";
-
-#endif /* SURFDETECT_H */
+#endif /* GRIDMOSAIC_H */

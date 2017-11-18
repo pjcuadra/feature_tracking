@@ -22,47 +22,54 @@
  * SOFTWARE.
  *
  */
-#ifndef SURFDETECT_H
-#define SURFDETECT_H
+#ifndef MOSAIC_H
+#define MOSAIC_H
 
+#include <chrono>
+#include <iostream>
 #include <opencv2/core/core.hpp>
 #include <opencv2/core/utility.hpp>
-#include <opencv2/xfeatures2d/nonfree.hpp>
+#include <util/Debug.hpp>
 
-#include <detectors/FeatureDetect.hpp>
-
-using namespace cv;
-using namespace cv::xfeatures2d;
 using namespace std;
+using namespace cv;
 
-class SurfDetect : public FeatureDetect {
+class Mosaic {
 public:
-  /** Comand line parser options */
-  static const String options;
+  struct MosaicImage {
+    Mat image;
+    Mat m;
+  };
+  /**
+   * Constructor
+   * @param rows number of rows
+   * @param cols number of columns
+   */
+  Mosaic(string name = "Mosaic");
+
+  void setImage(Mat image, Mat M);
+  void setImage(MosaicImage mosaicImage);
+  void pushImage(Mat image, Mat M);
+  void setReference(Mat image);
 
   /**
-   * SURF feature detection
-   * @param parser Comand Line Parser
+   * Display the window
    */
-  SurfDetect(CommandLineParser parser) : FeatureDetect(parser, "SURF", "surf") {
-    this->surfHessianTh = parser.get<int>("surf_h");
-    this->detector = SURF::create(this->surfHessianTh);
-    paramsString << "  Hessian Threshold: " << this->surfHessianTh << endl;
-  }
-
-  SurfDetect(CommandLineParser parser, double newThreshold)
-      : FeatureDetect(parser, "SURF", "surf") {
-    this->surfHessianTh = newThreshold;
-    this->detector = SURF::create(newThreshold);
-    paramsString << "  Hessian Threshold: " << this->surfHessianTh << endl;
-  }
+  void show();
 
 private:
-  /** SURF Hessian Threshold */
-  int surfHessianTh;
+  /* Images storage */
+  vector<MosaicImage> mosaicImages;
+  /* Window name */
+  string name;
+
+  Mat fullImage;
+
+  /**
+   * Create the mosaic image
+   * @return Mosaic image
+   */
+  void create();
 };
 
-const String SurfDetect::options = "{surf   |     | SURF Enable    }"
-                                   "{surf_h | 400 | Display images }";
-
-#endif /* SURFDETECT_H */
+#endif /* GRIDMOSAIC_H */

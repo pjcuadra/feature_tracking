@@ -30,8 +30,8 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 
-#include <Debug.hpp>
 #include <detectors/FeatureDetect.hpp>
+#include <util/Debug.hpp>
 
 using namespace cv;
 using namespace cv::xfeatures2d;
