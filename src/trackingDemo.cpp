@@ -364,7 +364,7 @@ void calcHomographyMatrix() {
 
   for (int i = 0; i < inputImagesPaths.size() - 1; i++) {
     currInfo = findMatchInfo(i, i + 1);
-    currInfo.H.copyTo(homography[i]);
+    currInfo.H.copyTo(homography[i]); // BestOf2NearestMatche calculates Homography for us using RANSAC
     DEBUG_STREAM("Homography of " << inputImagesPaths[i + 1] << " -> " << inputImagesPaths[i]);
     DEBUG_STREAM(" H = " << homography[i]);
   }
