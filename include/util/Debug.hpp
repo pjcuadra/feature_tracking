@@ -33,10 +33,12 @@ using namespace std;
 
 #define LOG(message) Debug::printMessage(message)
 #define TRACE_LINE(file, line) Debug::addPoint(file, line)
-#define STACK_TRACE(function) Debug::printMessage(function)
+#define STACK_TRACE(function)                                                  \
+  Debug::printMessage(string("Function: ") + string(function))
 #define DEBUG_STREAM(obj)                                                      \
+  Debug::out.str("");                                                          \
   Debug::out << obj;                                                           \
-  LOG(Debug::out.str())
+  LOG(Debug::out.str());
 
 class Debug {
 private:
