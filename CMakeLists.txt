@@ -92,18 +92,10 @@ add_executable(feature_detector_demo
 )
 target_link_libraries(feature_detector_demo ${OpenCV_LIBS})
 
-# add_executable(klt_tracker_demo
-#   ${CMAKE_SOURCE_DIR}/src/kltTrackerDemo.cpp
-#   ${DETECTOR_SOURCES}
-#   ${TRACKERS_SOURCES}
-#   ${UTIL_SOURCES}
-# )
-# target_link_libraries(klt_tracker_demo ${OpenCV_LIBS})
-
-add_executable(surf_matching_demo
-  ${CMAKE_SOURCE_DIR}/src/surfMatchDemo.cpp
+add_executable(tracking_demo
+  ${CMAKE_SOURCE_DIR}/src/trackingDemo.cpp
   ${DETECTOR_SOURCES}
   ${TRACKERS_SOURCES}
   ${UTIL_SOURCES}
 )
-target_link_libraries(surf_matching_demo ${OpenCV_LIBS})
+target_link_libraries(tracking_demo ${OpenCV_LIBS})

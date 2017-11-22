@@ -56,7 +56,7 @@ Tracker::Tracker(CommandLineParser parser, string name, Ptr<Feature2D> detector,
 }
 
 void Tracker::runExtract() {
-  STACK_TRACE(__FUNCTION__);
+  STACK_TRACE(__PRETTY_FUNCTION__);
   for (int i = 0; i < 2; i++) {
     this->detector->detectAndCompute(this->inputImage[i], noArray(),
                                      this->keypoints[i], this->descriptors[i]);
@@ -64,21 +64,24 @@ void Tracker::runExtract() {
 }
 
 void Tracker::_runExtract() {
-  STACK_TRACE(__FUNCTION__);
+  STACK_TRACE(__PRETTY_FUNCTION__);
   assert(!detector.empty());
 
   this->runExtract();
 }
 
 void Tracker::runTrack() {
-  STACK_TRACE(__FUNCTION__);
+  STACK_TRACE(__PRETTY_FUNCTION__);
 
   maxDist = 0;
   minDist = 100000;
 
   TRACE_LINE(__FILE__, __LINE__);
-  cout << this->descriptors[0].size() << endl;
-  cout << this->descriptors[1].size() << endl;
+
+  LOG("Descriptors Of Image 1");
+  DEBUG_STREAM(this->descriptors[0].size());
+  LOG("Descriptors Of Image 2");
+  DEBUG_STREAM(this->descriptors[1].size());
 
   this->matcher->match(this->descriptors[0], this->descriptors[1],
                        this->matches);
@@ -93,14 +96,14 @@ void Tracker::runTrack() {
 }
 
 void Tracker::_runTrack() {
-  STACK_TRACE(__FUNCTION__);
+  STACK_TRACE(__PRETTY_FUNCTION__);
   assert(!matcher.empty());
 
   this->runTrack();
 }
 
 void Tracker::runFilter() {
-  STACK_TRACE(__FUNCTION__);
+  STACK_TRACE(__PRETTY_FUNCTION__);
 
   double normDistance;
   vector<DMatch> goodMatches;
@@ -122,6 +125,7 @@ void Tracker::runFilter() {
 }
 
 void Tracker::matchesToKeypoints(vector<KeyPoint> &kp1, vector<KeyPoint> &kp2) {
+  STACK_TRACE(__PRETTY_FUNCTION__);
   kp1.clear();
   kp2.clear();
 
@@ -132,32 +136,39 @@ void Tracker::matchesToKeypoints(vector<KeyPoint> &kp1, vector<KeyPoint> &kp2) {
 }
 
 void Tracker::matchesToPoints(vector<Point2f> &p1, vector<Point2f> &p2) {
+  STACK_TRACE(__PRETTY_FUNCTION__);
   vector<KeyPoint> kp1;
   vector<KeyPoint> kp2;
-  p1.clear();
-  p2.clear();
+  // p1.clear();
+  // p2.clear();
 
   matchesToKeypoints(kp1, kp2);
 
-  cout << kp1.size() << endl;
-  cout << kp2.size() << endl;
+  LOG("Keypoints Of Image 1");
+  DEBUG_STREAM(kp1.size());
+  LOG("Keypoints Of Image 2");
+  DEBUG_STREAM(kp2.size());
 
   KeyPoint::convert(kp1, p1);
   KeyPoint::convert(kp2, p2);
 
-  cout << p1.size() << endl;
-  cout << p2.size() << endl;
+  LOG("Points Of Image 1");
+  DEBUG_STREAM(p1.size());
+  LOG("Points Of Image 2");
+  DEBUG_STREAM(p2.size());
+
+  TRACE_LINE(__FILE__, __LINE__);
 }
 
 void Tracker::_runFilter() {
-  STACK_TRACE(__FUNCTION__);
+  STACK_TRACE(__PRETTY_FUNCTION__);
   assert(!matcher.empty());
 
   this->runFilter();
 }
 
 void Tracker::track(Mat img1, Mat img2) {
-  STACK_TRACE(__FUNCTION__);
+  STACK_TRACE(__PRETTY_FUNCTION__);
 
   this->inputImage[0] = img1;
   this->inputImage[1] = img2;
@@ -168,7 +179,7 @@ void Tracker::track(Mat img1, Mat img2) {
 }
 
 void Tracker::track(Mat img1, Mat img2, int k) {
-  STACK_TRACE(__FUNCTION__);
+  STACK_TRACE(__PRETTY_FUNCTION__);
   vector<DMatch> tmp;
 
   this->inputImage[0] = img1;
@@ -191,31 +202,35 @@ void Tracker::track(Mat img1, Mat img2, int k) {
 }
 
 void Tracker::updateOutputImage() {
-  STACK_TRACE(__FUNCTION__);
+  STACK_TRACE(__PRETTY_FUNCTION__);
 
   assert(this->inputImage[0].rows != 0 && this->inputImage[0].cols != 0);
   assert(this->inputImage[1].rows != 0 && this->inputImage[1].cols != 0);
   assert(this->keypoints[0].size() != 0);
   assert(this->keypoints[1].size() != 0);
   assert(matches.size() != 0);
-
+  TRACE_LINE(__FILE__, __LINE__);
   drawMatches(this->inputImage[0], this->keypoints[0], this->inputImage[1],
               this->keypoints[1], matches, this->outputImage[2],
               Scalar::all(-1), Scalar::all(-1), vector<char>(),
               DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS |
                   DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
 
+  TRACE_LINE(__FILE__, __LINE__);
+
   drawKeypoints(this->inputImage[0], this->keypoints[0], this->outputImage[0],
                 Scalar::all(-1), DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
+  TRACE_LINE(__FILE__, __LINE__);
   drawKeypoints(this->inputImage[1], this->keypoints[1], this->outputImage[1],
                 Scalar::all(-1), DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
+  TRACE_LINE(__FILE__, __LINE__);
 }
 
 /**
  * Show the GUI
  */
 void Tracker::show() {
-  STACK_TRACE(__FUNCTION__);
+  STACK_TRACE(__PRETTY_FUNCTION__);
 
   if (!this->showEnable) {
     return;
@@ -226,8 +241,11 @@ void Tracker::show() {
   namedWindow(this->name + " - Image - 1", WINDOW_GUI_EXPANDED);
   namedWindow(this->name + " - Image - 2", WINDOW_GUI_EXPANDED);
   namedWindow(this->name, WINDOW_GUI_EXPANDED);
+  LOG("Showing image - 1");
   imshow(this->name + " - Image - 1", this->outputImage[0]);
+  LOG("Showing image - 2");
   imshow(this->name + " - Image - 2", this->outputImage[1]);
+  LOG("Showing Matches");
   imshow(this->name, this->outputImage[2]);
 }
 
