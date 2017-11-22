@@ -25,10 +25,12 @@
 #ifndef GRIDMOSAIC_H
 #define GRIDMOSAIC_H
 
-#include <chrono>
-#include <iostream>
 #include <opencv2/core/core.hpp>
 #include <opencv2/core/utility.hpp>
+
+#include <chrono>
+#include <iostream>
+
 #include <util/Debug.hpp>
 
 using namespace std;

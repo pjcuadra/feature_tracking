@@ -38,6 +38,9 @@ class Mosaic {
 public:
   struct MosaicImage {
     Mat image;
+    Mat rotation;
+    Mat translate;
+    Mat affine;
     Mat m;
   };
   /**
@@ -57,6 +60,8 @@ public:
    */
   void show();
 
+  // void setCameraMatrix(Matx33d K);
+
 private:
   /* Images storage */
   vector<MosaicImage> mosaicImages;
@@ -64,6 +69,7 @@ private:
   string name;
 
   Mat fullImage;
+  Matx33d K;
 
   /**
    * Create the mosaic image
