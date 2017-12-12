@@ -62,10 +62,20 @@ include_directories(${gtest_SOURCE_DIR}/include ${gtest_SOURCE_DIR})
 # Add all cpp in test/src
 file(GLOB_RECURSE TEST_SOURCES ${TEST_SOURCE_DIR}/*.cpp)
 
+# Add all detectors sources
+file(GLOB_RECURSE DETECTOR_SOURCES ${CMAKE_SOURCE_DIR}/src/detectors/*.cpp)
+file(GLOB_RECURSE TRACKERS_SOURCES ${CMAKE_SOURCE_DIR}/src/trackers/*.cpp)
+file(GLOB_RECURSE UTIL_SOURCES ${CMAKE_SOURCE_DIR}/src/util/*.cpp)
+
 #message("${OpenCV_LIBS}")
 
 # Create Testing executable
-add_executable(tests_exec ${TEST_SOURCES})
+add_executable(tests_exec
+  ${DETECTOR_SOURCES}
+  ${TRACKERS_SOURCES}
+  ${UTIL_SOURCES}
+  ${TEST_SOURCES}
+)
 
 # Link tests to gtest and openCV
 target_link_libraries(tests_exec ${OpenCV_LIBS} gtest gtest_main)
@@ -79,10 +89,7 @@ add_custom_target(run_tests
 ####
 include_directories(${CMAKE_SOURCE_DIR}/include)
 
-# Add all detectors sources
-file(GLOB_RECURSE DETECTOR_SOURCES ${CMAKE_SOURCE_DIR}/src/detectors/*.cpp)
-file(GLOB_RECURSE TRACKERS_SOURCES ${CMAKE_SOURCE_DIR}/src/trackers/*.cpp)
-file(GLOB_RECURSE UTIL_SOURCES ${CMAKE_SOURCE_DIR}/src/util/*.cpp)
+message(STATUS "Util Sources ${UTIL_SOURCES}")
 
 add_executable(feature_detector_demo
   ${CMAKE_SOURCE_DIR}/src/featureDetectorDemo.cpp
@@ -93,9 +100,9 @@ add_executable(feature_detector_demo
 target_link_libraries(feature_detector_demo ${OpenCV_LIBS})
 
 add_executable(tracking_demo
-  ${CMAKE_SOURCE_DIR}/src/trackingDemo.cpp
   ${DETECTOR_SOURCES}
   ${TRACKERS_SOURCES}
   ${UTIL_SOURCES}
+  ${CMAKE_SOURCE_DIR}/src/trackingDemo.cpp
 )
 target_link_libraries(tracking_demo ${OpenCV_LIBS})

@@ -33,6 +33,7 @@
 #include <trackers/Tracker.hpp>
 #include <util/Debug.hpp>
 #include <util/Mosaic.hpp>
+#include <util/CustomSerializer.hpp>
 
 using namespace cv;
 using namespace cv::xfeatures2d;
@@ -49,14 +50,16 @@ static String keys = "{help h usage ? |      | Print this message    }"
                      "{show           |      | Display images        }"
                      "{all            |      | Display images        }"
                      "{finder         |      | Feature Finder        }"
-                     "{extract        |      | Extract Features      }";
+                     "{extract        |      | Extract Features      }"
+                     "{match          |      | Match Features        }";
 
+const string featuresFile("features.yml");
 
 // Global constants
-static const int imageHeight = 5472;
-static const int imageWidth = 3648;
 static const double scaleFactor = 0.3;
 static const float	match_conf = 0.66f;
+static const int imageHeight = 5472;
+static const int imageWidth = 3648;
 
 static const double focalLength = 4419.441;
 static const double principalPointX = 2708.765;
@@ -80,7 +83,10 @@ static CameraParams specifiedCameraParams;
 static vector<Mat> homography;
 static vector<vector<Mat>> calculatedRotation;
 static vector<vector<Mat>> calculatedTranslation;
-
+static Ptr<WarperCreator> warperCreator = makePtr<cv::CompressedRectilinearWarper>();
+static Ptr<RotationWarper> warper = warperCreator->create(1.0f);
+static vector<Point2f> imageCorners;
+static Mat fullImage;
 
 void parserInputImagesFiles() {
   string fileName;
@@ -185,12 +191,15 @@ void printMatchesStats(int i, MatchesInfo info) {
 void findFeatures(Mat images[2], int i) {
   assert(i < inputImagesPaths.size() - 1);
 
+  // For the first run
   if (features[i].keypoints.empty()){
     (*finder)(images[PREV_IDX],	features[i]);
+    features[i].img_idx = i;
     printFeaturesStats(i);
   }
 
   (*finder)(images[CURR_IDX],	features[i + 1]);
+  features[i + 1].img_idx = i + 1;
   printFeaturesStats(i + 1);
 }
 
@@ -226,9 +235,14 @@ inline bool checkFileExists(const std::string& name) {
 
 void parseFeatures() {
   Mat images[2];
-  const string featuresFile("features.yml");
+  vector<ImageFeaturesSerializer> serFeatures(features.size());
+  FileStorage fs;
 
-//  if (parser->has("extract") || !checkFileExists(featuresFile)) {
+  for (int i = 0; i < features.size(); i++) {
+    serFeatures[i] = ImageFeaturesSerializer(features[i]);
+  }
+
+  if (parser->has("extract") || parser->has("match") || !checkFileExists(featuresFile)) {
 
     // Extract all features
     for (int i = 0; i < inputImagesPaths.size() - 1; i++) {
@@ -239,16 +253,15 @@ void parseFeatures() {
       findFeatures(images, i);
     }
 
-    FileStorage fs = FileStorage(featuresFile, FileStorage::WRITE);
-    fs.write("features", features);
+    fs = FileStorage(featuresFile, FileStorage::WRITE);
+    fs << "features" << serFeatures;
     fs.release();
     return;
-//  }
+  }
 
-//  FileStorage fs = FileStorage(featuresFile, FileStorage::READ);
-//  fs.read("features", features);
-//  fs.release();
-
+  fs = FileStorage(featuresFile, FileStorage::READ);
+  fs["features"] >> serFeatures;
+  fs.release();
 }
 
 MatchesInfo findMatchInfo(int src, int dst) {
@@ -263,18 +276,29 @@ MatchesInfo findMatchInfo(int src, int dst) {
   return pairwiseMatches[distance(pairwiseMatches.begin(), it)];
 }
 
+void warpImages(Mat images[2], int i) {
+  Mat warpedImage;
+  Mat fullImage;
+
+  // Apply homography to the image
+  warpPerspective(images[CURR_IDX], warpedImage, homography[i], images[CURR_IDX].size());
+  addWeighted(images[PREV_IDX], 0.5, warpedImage, 0.5, 1, fullImage);
+
+  imshow("Warped", fullImage);
+  imwrite("/home/pjcuadra/Downloads/test.jpg", fullImage);
+}
+
 void drawGui() {
   Mat images[2];
   Mat imagesWithFeatures[2];
   Mat matchesImage;
   stringstream ss;
   MatchesInfo currMatch;
-  Ptr<Mosaic> mosaic;
-  Mat warpedImage;
 
   namedWindow(image1Window, WINDOW_GUI_EXPANDED);
   namedWindow(image2Window, WINDOW_GUI_EXPANDED);
   namedWindow("Matches", WINDOW_GUI_EXPANDED);
+  namedWindow("Warped", WINDOW_GUI_EXPANDED);
 
   // Extract all features
   for (int i = 0; i < inputImagesPaths.size() - 1; i++) {
@@ -321,16 +345,7 @@ void drawGui() {
     displayStatusBar("Matches", ss.str());
 
     LOG("Warping");
-    images[PREV_IDX].copyTo(warpedImage);
-    mosaic = makePtr<Mosaic>("Warped");
-//    mosaic->setReference(images[PREV_IDX]);
-//    mosaic->pushImage(images[CURR_IDX], homography[i]);
-//    mosaic->show();
-    warpPerspective(warpedImage, warpedImage,  homography[i], warpedImage.size(), INTER_LINEAR /*| WARP_INVERSE_MAP*/);
-
-    warpedImage += images[CURR_IDX];
-
-    imshow("Warped",  warpedImage);
+    warpImages(images, i);
 
     if (!waitAndContinue()) {
       break;
@@ -356,22 +371,88 @@ void estimateCameraParams() {
     DEBUG_STREAM( "  K = " << estimatedCamerasParams[i].K());
     DEBUG_STREAM( "  R = " << estimatedCamerasParams[i].R);
     DEBUG_STREAM( "  t = " << estimatedCamerasParams[i].t);
+
+    estimatedCamerasParams[i].R.convertTo(estimatedCamerasParams[i].R, CV_32F);
+  }
+}
+
+void adjustCameraParams() {
+  static Ptr<BundleAdjusterBase> adjuster = makePtr<BundleAdjusterReproj>();
+  static float confThresh	=	0.03f;
+
+  adjuster->setConfThresh(confThresh);
+
+  if	(!(*adjuster)(features,	pairwiseMatches,	estimatedCamerasParams)) {
+      LOG("Adjusting camera parameters	failed.");
+      return;
+  }
+
+  for (int i = 0; i < inputImagesPaths.size(); i++) {
+    DEBUG_STREAM( "Camera Params Image - " << inputImagesPaths[i]);
+    DEBUG_STREAM( "  K = " << estimatedCamerasParams[i].K());
+    DEBUG_STREAM( "  R = " << estimatedCamerasParams[i].R);
+    DEBUG_STREAM( "  t = " << estimatedCamerasParams[i].t);
+
+    estimatedCamerasParams[i].R.convertTo(estimatedCamerasParams[i].R, CV_32F);
   }
 }
 
 void calcHomographyMatrix() {
   MatchesInfo currInfo;
+  vector<Point2f> srcPoints, dstPoints;
+  Mat H;
 
   for (int i = 0; i < inputImagesPaths.size() - 1; i++) {
     currInfo = findMatchInfo(i, i + 1);
-    currInfo.H.copyTo(homography[i]); // BestOf2NearestMatche calculates Homography for us using RANSAC
+
+    srcPoints.clear();
+    dstPoints.clear();
+
+    for (int o = 0; o < currInfo.matches.size(); o++) {
+      Point2f src, dst;
+      dst = features[currInfo.src_img_idx].keypoints[currInfo.matches[o].queryIdx].pt;
+      src = features[currInfo.dst_img_idx].keypoints[currInfo.matches[o].trainIdx].pt;
+
+      srcPoints.push_back(src);
+      dstPoints.push_back(dst);
+    }
+
+    H = findHomography(srcPoints, dstPoints, currInfo.inliers_mask, RANSAC);
+
     DEBUG_STREAM("Homography of " << inputImagesPaths[i + 1] << " -> " << inputImagesPaths[i]);
-    DEBUG_STREAM(" H = " << homography[i]);
+    DEBUG_STREAM(" H = " << H);
+
+    H.copyTo(homography[i]);
+
+  }
+}
+
+void compareProjectedPoints() {
+  MatchesInfo currInfo;
+  vector<Point2f> inPoints;
+  vector<Point2f> outPoints;
+
+  for (int i = 0; i < inputImagesPaths.size() - 1; i++) {
+    currInfo = findMatchInfo(i, i + 1);
+
+    inPoints.clear();
+
+    for (int p = 0; p < currInfo.matches.size(); p++) {
+      inPoints.push_back(features[currInfo.src_img_idx].keypoints[currInfo.matches[p].queryIdx].pt);
+    }
+
+    perspectiveTransform(inPoints, outPoints, homography[i]);
+
+    for (int p = 0; p < currInfo.matches.size(); p++) {
+      DEBUG_STREAM("Original Image Point : " << features[currInfo.dst_img_idx].keypoints[currInfo.matches[p].trainIdx].pt);
+      DEBUG_STREAM("Projected Image Point (before): " << inPoints[p]);
+      DEBUG_STREAM("Projected Image Point : " << outPoints[p]);
+    }
+
   }
 }
 
 void decomoposeHMatrix() {
-
   Mat K;
 
   specifiedCameraParams.K().copyTo(K);
@@ -388,30 +469,74 @@ void decomoposeHMatrix() {
 
     DEBUG_STREAM("Rotation of " << inputImagesPaths[i + 1] << " -> " << inputImagesPaths[i]);
     for (int o = 0; o < calculatedRotation[i].size(); o++) {
-      DEBUG_STREAM(" R[" << o << "] = " << calculatedRotation[i][0]);
+      DEBUG_STREAM(" R[" << o << "] = " << calculatedRotation[i][o]);
     }
 
     DEBUG_STREAM("Translation of " << inputImagesPaths[i + 1] << " -> " << inputImagesPaths[i]);
     for (int o = 0; o < calculatedTranslation[i].size(); o++) {
-      DEBUG_STREAM(" t[" << o << "]= " << calculatedTranslation[i][0]);
+      DEBUG_STREAM(" t[" << o << "]= " << calculatedTranslation[i][o]);
+    }
+
+    decomposeHomographyMat(homography[i],
+                           estimatedCamerasParams[i].K(),
+                           calculatedRotation[i],
+                           calculatedTranslation[i],
+                           noArray());
+
+    DEBUG_STREAM("Rotation K() of " << inputImagesPaths[i + 1] << " -> " << inputImagesPaths[i]);
+    for (int o = 0; o < calculatedRotation[i].size(); o++) {
+      DEBUG_STREAM(" R[" << o << "] = " << calculatedRotation[i][o]);
+    }
+
+    DEBUG_STREAM("Translation K() of " << inputImagesPaths[i + 1] << " -> " << inputImagesPaths[i]);
+    for (int o = 0; o < calculatedTranslation[i].size(); o++) {
+      DEBUG_STREAM(" t[" << o << "]= " << calculatedTranslation[i][o]);
     }
 
   }
 }
 
-int main(int argc, char **argv) {
+void matchFeatures() {
   BestOf2NearestMatcher	matcher(false,	match_conf);
+  vector<MatchesInfoSerializer> serMatches;
+  FileStorage fs;
 
+  if (parser->has("match") || !checkFileExists(featuresFile)) {
+    matcher(features,	pairwiseMatches);
+    matcher.collectGarbage();
+
+    serMatches = vector<MatchesInfoSerializer>(pairwiseMatches.size());
+
+    for (int i = 0; i < pairwiseMatches.size(); i++) {
+      serMatches[i] = MatchesInfoSerializer(pairwiseMatches[i]);
+    }
+
+    fs = FileStorage(featuresFile, FileStorage::APPEND);
+    fs << "matches" << serMatches;
+    fs.release();
+    return;
+  }
+
+  fs = FileStorage(featuresFile, FileStorage::READ);
+  fs["matches"] >> serMatches;
+  fs.release();
+
+  for (int i = 0; i < serMatches.size(); i++) {
+    pairwiseMatches.push_back(*serMatches[i].matches);
+  }
+
+}
+
+int main(int argc, char **argv) {
   parser = makePtr<CommandLineParser>(argc, argv, keys);
 
   Debug::setEnable(parser->has("v"));
   enableGui = parser->has("show");
 
   // From the data source
-  specifiedCameraParams.ppx = 2708.765 * scaleFactor;
-  specifiedCameraParams.ppy = 1775.895 * scaleFactor;
+  specifiedCameraParams.ppy = 2708.765 * scaleFactor;
+  specifiedCameraParams.ppx = 1775.895 * scaleFactor;
   specifiedCameraParams.focal = 4419.441 * scaleFactor;
-
 
   versionPrinting();
   parserFinder();
@@ -425,12 +550,16 @@ int main(int argc, char **argv) {
   calculatedRotation = vector<vector<Mat>>(inputImagesPaths.size() - 1);
   calculatedTranslation = vector<vector<Mat>>(inputImagesPaths.size() - 1);
 
+  imageCorners.push_back(Point2f(0, 0));
+  imageCorners.push_back(Point2f(scaled.width, 0));
+  imageCorners.push_back(Point2f(scaled.width, scaled.height));
+  imageCorners.push_back(Point2f(0, scaled.height));
+
   LOG("Detecting Features");
   parseFeatures();
 
   LOG("Matching Features");
-  matcher(features,	pairwiseMatches);
-  matcher.collectGarbage();
+  matchFeatures();
 
   LOG("Calculate Homography Matrix");
   calcHomographyMatrix();
@@ -438,8 +567,14 @@ int main(int argc, char **argv) {
   LOG("Estimate Camera Parameters");
   estimateCameraParams();
 
+//  LOG("Adjust Camera Parameters");
+//  adjustCameraParams();
+
   LOG("Decompose Rotational and Translational Matrix");
   decomoposeHMatrix();
+
+  LOG("Testing projection");
+  compareProjectedPoints();
 
   if (enableGui) {
     drawGui();
