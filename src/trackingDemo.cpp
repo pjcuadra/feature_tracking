@@ -45,7 +45,7 @@ using namespace std;
 
 static String keys = "{help h usage ? |      | Print this message    }"
                      "{v              |      | Verbose               }"
-                     "{out            |      | Output Image Path     }"
+                     "{outdir         |      | Output Image Path     }"
                      "{indir          |      | Input Directory Path  }"
                      "{show           |      | Display images        }"
                      "{all            |      | Display images        }"
@@ -81,15 +81,41 @@ static FileStorage fs;
 static vector<CameraParams>	estimatedCamerasParams;
 static CameraParams specifiedCameraParams;
 static vector<Mat> homography;
+static vector<MatchesInfo> seqMatchesInfo;
 static vector<vector<Mat>> calculatedRotation;
 static vector<vector<Mat>> calculatedTranslation;
 static Ptr<WarperCreator> warperCreator = makePtr<cv::CompressedRectilinearWarper>();
 static Ptr<RotationWarper> warper = warperCreator->create(1.0f);
 static vector<Point2f> imageCorners;
 static Mat fullImage;
+static bool outEnable;
+static string outdir;
+static string indir;
+
+string getFileExt(const string& s) {
+
+   size_t i = s.rfind('.', s.length());
+   if (i != string::npos) {
+      return(s.substr(i+1, s.length() - i));
+   }
+
+   return("");
+}
+
+string getFileRoot(const string& s) {
+  string fileRoot = "";
+
+   size_t i = s.rfind('.', s.length());
+   if (i != string::npos) {
+     fileRoot = s.substr(0, i);
+     return(fileRoot);
+   }
+
+   return("");
+}
 
 void parserInputImagesFiles() {
-  string fileName;
+  string fileName, extension;
   struct dirent *ent;
   DIR *dir;
 
@@ -98,8 +124,10 @@ void parserInputImagesFiles() {
     exit(-1);
   }
 
+  indir = parser->get<string>("indir");
+
   // Add all directory's files to the vector
-  if ((dir = opendir(parser->get<string>("indir").c_str())) != NULL) {
+  if ((dir = opendir(indir.c_str())) != NULL) {
     /* print all the files and directories within directory */
     while ((ent = readdir(dir)) != NULL) {
       // DEBUG_STREAM( "file: " << ent->d_name );
@@ -107,8 +135,14 @@ void parserInputImagesFiles() {
         continue;
       }
 
-      inputImagesPaths.push_back(parser->get<string>("indir") + "/" +
-                                ent->d_name);
+      fileName = ent->d_name;
+      extension = getFileExt(fileName);
+      transform(extension.begin(), extension.end(), extension.begin(), ::tolower);
+
+      // Check if it's image
+      if (extension == "jpg" || extension == "gif" || extension == "jpeg") {
+        inputImagesPaths.push_back(fileName);
+      }
     }
 
     sort(inputImagesPaths.begin(), inputImagesPaths.end());
@@ -157,7 +191,7 @@ bool waitAndContinue() {
 void readImage(Mat &image, int i) {
   assert(i < inputImagesPaths.size());
 
-  image = imread(inputImagesPaths[i]);
+  image = imread(indir + "/" + inputImagesPaths[i]);
   assert(!image.empty());
   resize(image, image, scaled);
 }
@@ -166,14 +200,14 @@ void readImages(Mat images[2], int i) {
   assert(i < inputImagesPaths.size() - 1);
 
   if (images[PREV_IDX].empty()){
-    images[PREV_IDX] = imread(inputImagesPaths[i]);
+    images[PREV_IDX] = imread(indir + "/" + inputImagesPaths[i]);
     assert(!images[PREV_IDX].empty());
     resize(images[PREV_IDX], images[PREV_IDX], scaled);
   } else {
     images[CURR_IDX].copyTo(images[PREV_IDX]);
   }
 
-  images[CURR_IDX] = imread(inputImagesPaths[i + 1]);
+  images[CURR_IDX] = imread(indir + "/" + inputImagesPaths[i + 1]);
   assert(!images[CURR_IDX].empty());
   resize(images[CURR_IDX], images[CURR_IDX], scaled);
 }
@@ -242,7 +276,7 @@ void parseFeatures() {
     serFeatures[i] = ImageFeaturesSerializer(features[i]);
   }
 
-  if (parser->has("extract") || parser->has("match") || !checkFileExists(featuresFile)) {
+  if (parser->has("extract") || !checkFileExists(featuresFile)) {
 
     // Extract all features
     for (int i = 0; i < inputImagesPaths.size() - 1; i++) {
@@ -264,16 +298,16 @@ void parseFeatures() {
   fs.release();
 }
 
-MatchesInfo findMatchInfo(int src, int dst) {
-  auto it = find_if(pairwiseMatches.begin(),
-                  pairwiseMatches.end(),
+MatchesInfo findMatchInfo(vector<MatchesInfo> matches, int src, int dst) {
+  auto it = find_if(matches.begin(),
+                  matches.end(),
                   [&src, &dst](const MatchesInfo& obj) {
                     return (obj.src_img_idx == src) && (obj.dst_img_idx == dst);
                   });
 
-  assert(it != pairwiseMatches.end());
+  assert(it != matches.end());
 
-  return pairwiseMatches[distance(pairwiseMatches.begin(), it)];
+  return matches[distance(matches.begin(), it)];
 }
 
 void warpImages(Mat images[2], int i) {
@@ -281,29 +315,45 @@ void warpImages(Mat images[2], int i) {
   Mat fullImage;
 
   // Apply homography to the image
-  warpPerspective(images[CURR_IDX], warpedImage, homography[i], images[CURR_IDX].size());
-  addWeighted(images[PREV_IDX], 0.5, warpedImage, 0.5, 1, fullImage);
+  if (seqMatchesInfo[i].confidence == 0) {
+    images[PREV_IDX].copyTo(fullImage);
+  } else {
+    warpPerspective(images[CURR_IDX], warpedImage, homography[i], images[CURR_IDX].size());
+    addWeighted(images[PREV_IDX], 0.5, warpedImage, 0.5, 1, fullImage);
+  }
 
-  imshow("Warped", fullImage);
-  imwrite("/home/pjcuadra/Downloads/test.jpg", fullImage);
+  if (enableGui) {
+    imshow("Warped", fullImage);
+  }
+
+  if (outEnable) {
+    imwrite(outdir + "/" + getFileRoot(inputImagesPaths[i]) + "/warped_" + inputImagesPaths[i], fullImage);
+  }
 }
 
-void drawGui() {
+void createImages() {
   Mat images[2];
   Mat imagesWithFeatures[2];
   Mat matchesImage;
   stringstream ss;
   MatchesInfo currMatch;
+  string currOutDir = "";
 
-  namedWindow(image1Window, WINDOW_GUI_EXPANDED);
-  namedWindow(image2Window, WINDOW_GUI_EXPANDED);
-  namedWindow("Matches", WINDOW_GUI_EXPANDED);
-  namedWindow("Warped", WINDOW_GUI_EXPANDED);
+  if (enableGui) {
+    namedWindow(image1Window, WINDOW_GUI_EXPANDED);
+    namedWindow(image2Window, WINDOW_GUI_EXPANDED);
+    namedWindow("Matches", WINDOW_GUI_EXPANDED);
+    namedWindow("Warped", WINDOW_GUI_EXPANDED);
+  }
 
   // Extract all features
   for (int i = 0; i < inputImagesPaths.size() - 1; i++) {
     readImages(images, i);
     TRACE_LINE(__FILE__, __LINE__);
+
+    if (outEnable) {
+      currOutDir = outdir + "/" + getFileRoot(inputImagesPaths[i]) + "/";
+    }
 
     drawKeypoints(images[PREV_IDX],
                   features[i].keypoints,
@@ -317,18 +367,28 @@ void drawGui() {
                   Scalar::all(-1),
                   DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
 
-    imshow(image1Window, imagesWithFeatures[PREV_IDX]);
-    imshow(image2Window, imagesWithFeatures[CURR_IDX]);
 
-    ss.str("");
-    ss << inputImagesPaths[i] << " - " << features[i].keypoints.size() << " Features";
-    displayStatusBar(image1Window, ss.str());
+    if (outEnable) {
+      imwrite(currOutDir + inputImagesPaths[i], images[PREV_IDX]);
+      imwrite(currOutDir + inputImagesPaths[i + 1], images[CURR_IDX]);
+      imwrite(currOutDir + "features_" + inputImagesPaths[i], imagesWithFeatures[PREV_IDX]);
+      imwrite(currOutDir + "features_" + inputImagesPaths[i+1], imagesWithFeatures[CURR_IDX]);
+    }
 
-    ss.str("");
-    ss << inputImagesPaths[i + 1] << " - " << features[i + 1].keypoints.size() << " Features";
-    displayStatusBar(image2Window, ss.str());
+    if (enableGui) {
+      imshow(image1Window, imagesWithFeatures[PREV_IDX]);
+      imshow(image2Window, imagesWithFeatures[CURR_IDX]);
 
-    currMatch = findMatchInfo(i, i + 1);
+      ss.str("");
+      ss << inputImagesPaths[i] << " - " << features[i].keypoints.size() << " Features";
+      displayStatusBar(image1Window, ss.str());
+
+      ss.str("");
+      ss << inputImagesPaths[i + 1] << " - " << features[i + 1].keypoints.size() << " Features";
+      displayStatusBar(image2Window, ss.str());
+    }
+
+    currMatch = seqMatchesInfo[i];
 
     printMatchesStats(i, currMatch);
 
@@ -339,10 +399,19 @@ void drawGui() {
                 currMatch.matches,
                 matchesImage);
 
-    imshow("Matches", matchesImage);
-    ss.str("");
-    ss << inputImagesPaths[i] << " -> " << inputImagesPaths[i + 1] << " - " << currMatch.matches.size() << " Matches";
-    displayStatusBar("Matches", ss.str());
+    if (outEnable) {
+      imwrite(currOutDir + "matches_" + inputImagesPaths[i], matchesImage);
+    }
+
+    if (enableGui) {
+      imshow("Matches", matchesImage);
+
+
+      ss.str("");
+      ss << inputImagesPaths[i] << " -> " << inputImagesPaths[i + 1] << " - " << currMatch.matches.size() << " Matches";
+      displayStatusBar("Matches", ss.str());
+
+    }
 
     LOG("Warping");
     warpImages(images, i);
@@ -350,6 +419,10 @@ void drawGui() {
     if (!waitAndContinue()) {
       break;
     }
+  }
+
+  if (!enableGui) {
+    return;
   }
 
   // Wait for the ESC key to be pressed
@@ -401,15 +474,27 @@ void calcHomographyMatrix() {
   MatchesInfo currInfo;
   vector<Point2f> srcPoints, dstPoints;
   Mat H;
+  FileStorage fs;
 
   for (int i = 0; i < inputImagesPaths.size() - 1; i++) {
-    currInfo = findMatchInfo(i, i + 1);
+    currInfo = seqMatchesInfo[i];
+
+    if (currInfo.confidence == 0) {
+      DEBUG_STREAM("Homography of " << inputImagesPaths[i + 1] << " -> " << inputImagesPaths[i] << " - NOT FOUND");
+//      DEBUG_STREAM(" H = NULL");
+      continue;
+    }
 
     srcPoints.clear();
     dstPoints.clear();
 
     for (int o = 0; o < currInfo.matches.size(); o++) {
       Point2f src, dst;
+
+      if (!currInfo.inliers_mask[i]) {
+        continue;
+      }
+
       dst = features[currInfo.src_img_idx].keypoints[currInfo.matches[o].queryIdx].pt;
       src = features[currInfo.dst_img_idx].keypoints[currInfo.matches[o].trainIdx].pt;
 
@@ -419,10 +504,18 @@ void calcHomographyMatrix() {
 
     H = findHomography(srcPoints, dstPoints, currInfo.inliers_mask, RANSAC);
 
-    DEBUG_STREAM("Homography of " << inputImagesPaths[i + 1] << " -> " << inputImagesPaths[i]);
-    DEBUG_STREAM(" H = " << H);
+    DEBUG_STREAM("Homography of " << inputImagesPaths[i + 1] << " -> " << inputImagesPaths[i] << " - FOUND");
+//    DEBUG_STREAM(" H = " << H);
 
     H.copyTo(homography[i]);
+
+    if (!outEnable) {
+      continue;
+    }
+
+    fs = FileStorage(outdir + "/" + getFileRoot(inputImagesPaths[i]) + "/homography.yml" , FileStorage::WRITE);
+    fs << "homography" << H;
+    fs.release();
 
   }
 }
@@ -433,7 +526,12 @@ void compareProjectedPoints() {
   vector<Point2f> outPoints;
 
   for (int i = 0; i < inputImagesPaths.size() - 1; i++) {
-    currInfo = findMatchInfo(i, i + 1);
+    currInfo = seqMatchesInfo[i];
+
+    if (currInfo.confidence == 0) {
+      DEBUG_STREAM("Skipping Comparison of projections of " << inputImagesPaths[i + 1] << " -> " << inputImagesPaths[i]);
+      continue;
+    }
 
     inPoints.clear();
 
@@ -453,6 +551,7 @@ void compareProjectedPoints() {
 }
 
 void decomoposeHMatrix() {
+  FileStorage fs;
   Mat K;
 
   specifiedCameraParams.K().copyTo(K);
@@ -461,6 +560,11 @@ void decomoposeHMatrix() {
   DEBUG_STREAM(" K = " << K);
 
   for (int i = 0; i < inputImagesPaths.size() - 1; i++) {
+    if (seqMatchesInfo[i].confidence == 0) {
+      DEBUG_STREAM("Skipping H decompose of " << inputImagesPaths[i + 1] << " -> " << inputImagesPaths[i]);
+      continue;
+    }
+
     decomposeHomographyMat(homography[i],
                            K,
                            calculatedRotation[i],
@@ -493,6 +597,23 @@ void decomoposeHMatrix() {
       DEBUG_STREAM(" t[" << o << "]= " << calculatedTranslation[i][o]);
     }
 
+    if (!outEnable) {
+      continue;
+    }
+
+    fs = FileStorage(outdir + "/" + getFileRoot(inputImagesPaths[i]) + "/decomposedHomography.yml" , FileStorage::WRITE);
+    fs << "homography" << homography[i];
+    fs << "estimatedCameraParams" << estimatedCamerasParams[i].K();
+    fs << "translation" << calculatedTranslation[i];
+    fs << "rotation" << calculatedRotation[i];
+    fs.release();
+
+  }
+}
+
+void createSeqMatchesInfo() {
+  for (int i = 0; i < seqMatchesInfo.size(); i++) {
+    seqMatchesInfo[i] = findMatchInfo(pairwiseMatches, i, i + 1);
   }
 }
 
@@ -514,6 +635,9 @@ void matchFeatures() {
     fs = FileStorage(featuresFile, FileStorage::APPEND);
     fs << "matches" << serMatches;
     fs.release();
+
+    createSeqMatchesInfo();
+
     return;
   }
 
@@ -525,13 +649,34 @@ void matchFeatures() {
     pairwiseMatches.push_back(*serMatches[i].matches);
   }
 
+  createSeqMatchesInfo();
+}
+
+void createImageOutDir() {
+  string dir = "";
+  int dir_err = 0;
+  if (!outEnable) {
+    return;
+  }
+
+  for (int i = 0; i < inputImagesPaths.size(); i++){
+    dir = outdir + "/" + getFileRoot(inputImagesPaths[i]);
+    mkdir(dir.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+  }
 }
 
 int main(int argc, char **argv) {
+  int skipped = 0;
+  double t = (double)getTickCount();
+
   parser = makePtr<CommandLineParser>(argc, argv, keys);
 
   Debug::setEnable(parser->has("v"));
   enableGui = parser->has("show");
+  outEnable = parser->has("outdir");
+  if (outEnable) {
+    outdir = parser->get<string>("outdir");
+  }
 
   // From the data source
   specifiedCameraParams.ppy = 2708.765 * scaleFactor;
@@ -543,10 +688,16 @@ int main(int argc, char **argv) {
 
   TRACE_LINE(__FILE__, __LINE__);
   parserInputImagesFiles();
+  createImageOutDir();
+
+  if (inputImagesPaths.size() <= 1) {
+    error(-1, "No enought input files", __FUNCTION__, __FILE__, __LINE__);
+  }
 
   LOG("Initializing Vectors");
   features = vector<ImageFeatures>(inputImagesPaths.size());
   homography = vector<Mat>(inputImagesPaths.size() - 1);
+  seqMatchesInfo = vector<MatchesInfo>(inputImagesPaths.size() - 1);
   calculatedRotation = vector<vector<Mat>>(inputImagesPaths.size() - 1);
   calculatedTranslation = vector<vector<Mat>>(inputImagesPaths.size() - 1);
 
@@ -576,12 +727,30 @@ int main(int argc, char **argv) {
   LOG("Testing projection");
   compareProjectedPoints();
 
-  if (enableGui) {
-    drawGui();
+
+  LOG("Create Images");
+  createImages();
+
+  LOG("Calculate Running Stats");
+  for (int i = 0; i < inputImagesPaths.size(); i++) {
+    if (seqMatchesInfo[i].confidence == 0) {
+      skipped++;
+    }
   }
+  DEBUG_STREAM(" * Total images - " << inputImagesPaths.size());
+  DEBUG_STREAM(" * Skipped images - " << skipped);
+  DEBUG_STREAM(" * Skipped ratio - " << ((double)skipped)/((double)inputImagesPaths.size()));
+
+
+  t = ((double)getTickCount() - t)/getTickFrequency();
+  DEBUG_STREAM(" * Total Running Time - " << t << "s");
+  DEBUG_STREAM(" * Extract Enable - " << (parser->has("extract") ? "ON" : "OFF"));
+  DEBUG_STREAM(" * Match Enable - " << (parser->has("match") ? "ON" : "OFF"));
+  DEBUG_STREAM(" * Output Enable - " << (outEnable ? "ON" : "OFF"));
+  DEBUG_STREAM(" * Output Path - " << outdir);
+  DEBUG_STREAM(" * GUI Enable - " << (enableGui ? "ON" : "OFF"));
 
   return 0;
-
 }
 
 
