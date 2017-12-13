@@ -38,11 +38,7 @@ you can run our tests by running;
   ./tests_exec
 ```
 
-# Running Feature Extraction Demo
-
-TBD
-
-# Running Feature Tracking Demo
+# Feature Tracking Demo
 
 After compiling you can run the tracking demo by running;
 
