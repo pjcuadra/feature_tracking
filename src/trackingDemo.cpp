@@ -48,7 +48,6 @@ static String keys = "{help h usage ? |      | Print this message    }"
                      "{outdir         |      | Output Image Path     }"
                      "{indir          |      | Input Directory Path  }"
                      "{show           |      | Display images        }"
-                     "{all            |      | Display images        }"
                      "{finder         |      | Feature Finder        }"
                      "{extract        |      | Extract Features      }"
                      "{match          |      | Match Features        }";
@@ -491,9 +490,9 @@ void calcHomographyMatrix() {
     for (int o = 0; o < currInfo.matches.size(); o++) {
       Point2f src, dst;
 
-      if (!currInfo.inliers_mask[i]) {
-        continue;
-      }
+//      if (!currInfo.inliers_mask[i]) {
+//        continue;
+//      }
 
       dst = features[currInfo.src_img_idx].keypoints[currInfo.matches[o].queryIdx].pt;
       src = features[currInfo.dst_img_idx].keypoints[currInfo.matches[o].trainIdx].pt;
